@@ -1,3 +1,8 @@
 <resources>
-    <string name="app_name">control</string>
+    <string name="app_name">Control</string>
+    <string name="title_tracking">Tracking</string>
+    <string name="title_radio">Radio</string>
+    <string name="title_sensors">Sensors</string>
+    <string name="title_radio_transmit">Transmit</string>
+    <string name="title_radio_receive">Receive</string>
 </resources>

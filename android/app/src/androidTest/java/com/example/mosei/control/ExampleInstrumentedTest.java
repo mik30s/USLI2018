@@ -1,4 +1,4 @@
-package edu.tarleton.mike168m.control;
+package com.example.mosei.control;
 
 import android.content.Context;
 import android.support.test.InstrumentationRegistry;
@@ -21,6 +21,6 @@ public class ExampleInstrumentedTest {
         // Context of the app under test.
         Context appContext = InstrumentationRegistry.getTargetContext();
 
-        assertEquals("edu.tarleton.mike168m.control", appContext.getPackageName());
+        assertEquals("com.example.mosei.control", appContext.getPackageName());
     }
 }

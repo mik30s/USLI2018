@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<android.support.constraint.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <RelativeLayout
+        android:id="@+id/radio_fragment_linear_layout"
+        android:layout_width="368dp"
+        android:layout_height="395dp"
+        android:orientation="vertical"
+        tools:layout_editor_absoluteX="8dp"
+        tools:layout_editor_absoluteY="108dp">
+
+        <LinearLayout
+            android:id="@+id/radio_transmit_section"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="15dp"
+                android:text="@string/title_radio_transmit" />
+
+            <com.github.mikephil.charting.charts.LineChart
+                android:id="@+id/radio_transmit_chart"
+                android:layout_width="match_parent"
+                android:layout_height="60dp"></com.github.mikephil.charting.charts.LineChart>
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/radio_receive_section"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_below="@+id/radio_transmit_section"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="15dp"
+                android:text="@string/title_radio_receive" />
+
+            <com.github.mikephil.charting.charts.LineChart
+                android:id="@+id/radio_receive_chart"
+                android:layout_width="match_parent"
+                android:layout_height="60dp"></com.github.mikephil.charting.charts.LineChart>
+        </LinearLayout>
+
+
+    </RelativeLayout>
+</android.support.constraint.ConstraintLayout>
