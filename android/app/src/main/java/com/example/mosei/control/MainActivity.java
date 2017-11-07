@@ -1,26 +1,15 @@
 package com.example.mosei.control;
 
+import android.content.Intent;
 import android.os.Bundle;
+import android.view.MenuItem;
 import android.support.annotation.NonNull;
-import android.support.design.widget.BottomNavigationView;
 import android.support.v4.view.ViewPager;
 import android.support.v7.app.AppCompatActivity;
-import android.view.MenuItem;
-
-import ioio.lib.util.IOIOConnectionRegistry;
-import ioio.lib.util.android.IOIOActivity;
+import android.support.design.widget.BottomNavigationView;
 
 public class MainActivity extends AppCompatActivity
 {
-    static {
-        IOIOConnectionRegistry
-                .addBootstraps(new String[] {
-                        "ioio.lib.impl.SocketIOIOConnectionBootstrap",
-                        "ioio.lib.android.accessory.AccessoryConnectionBootstrap",
-                        "ioio.lib.android.bluetooth.BluetoothIOIOConnectionBootstrap",
-                        "ioio.lib.android.device.DeviceConnectionBootstrap"});
-    }
-
     ViewPager viewPager;
 
     private BottomNavigationView.OnNavigationItemSelectedListener
@@ -29,22 +18,24 @@ public class MainActivity extends AppCompatActivity
         @Override
         public boolean onNavigationItemSelected(@NonNull MenuItem item) {
             switch (item.getItemId()) {
-                case R.id.navigation_tracking:
-                    viewPager.setCurrentItem(AppFragmentPagerAdapter.TRACKING_FRAGMENT);
-                    return true;
                 case R.id.navigation_radio:
                     viewPager.setCurrentItem(AppFragmentPagerAdapter.RADIO_FRAGMENT);
-                    return true;
+                    break;
                 case R.id.navigation_sensors:
                     viewPager.setCurrentItem(AppFragmentPagerAdapter.SENSORS_FRAGMENT);
-                    return true;
+                    break;
                 default:
                     viewPager.setCurrentItem(AppFragmentPagerAdapter.TRACKING_FRAGMENT);
-                    return true;
+                    break;
             }
+            return true;
         }
     };
 
+    /**
+     * Called for each activity. Perform work on the first start of the activity.
+     * @param savedInstanceState
+     */
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -57,6 +48,8 @@ public class MainActivity extends AppCompatActivity
         BottomNavigationView navigation = findViewById(R.id.navigation);
         navigation.setOnNavigationItemSelectedListener(onNavigationItemSelectedListener);
 
-        new CommuncationThread(this).start();
+        startService(new Intent(this, CommuncationService.class));
+
+        finish();
     }
 }

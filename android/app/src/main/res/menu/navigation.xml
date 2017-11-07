@@ -2,11 +2,6 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
 
     <item
-        android:id="@+id/navigation_tracking"
-        android:icon="@drawable/ic_gps_fixed_black_24px"
-        android:title="@string/title_tracking" />
-
-    <item
         android:id="@+id/navigation_radio"
         android:icon="@drawable/ic_radio_black_24px"
         android:title="@string/title_radio" />
