@@ -1,55 +1,121 @@
 package com.example.mosei.control;
 
-import android.content.Intent;
+import ioio.lib.api.Uart;
+import ioio.lib.api.exception.ConnectionLostException;
+import ioio.lib.util.BaseIOIOLooper;
+import ioio.lib.util.android.IOIOActivity;
+
 import android.os.Bundle;
-import android.view.MenuItem;
-import android.support.annotation.NonNull;
-import android.support.v4.view.ViewPager;
-import android.support.v7.app.AppCompatActivity;
-import android.support.design.widget.BottomNavigationView;
+import android.util.Log;
+import android.view.View;
+import android.widget.Button;
 
-public class MainActivity extends AppCompatActivity
-{
-    ViewPager viewPager;
+import org.json.JSONObject;
 
-    private BottomNavigationView.OnNavigationItemSelectedListener
-    onNavigationItemSelectedListener = new BottomNavigationView.OnNavigationItemSelectedListener()
-    {
-        @Override
-        public boolean onNavigationItemSelected(@NonNull MenuItem item) {
-            switch (item.getItemId()) {
-                case R.id.navigation_radio:
-                    viewPager.setCurrentItem(AppFragmentPagerAdapter.RADIO_FRAGMENT);
-                    break;
-                case R.id.navigation_sensors:
-                    viewPager.setCurrentItem(AppFragmentPagerAdapter.SENSORS_FRAGMENT);
-                    break;
-                default:
-                    viewPager.setCurrentItem(AppFragmentPagerAdapter.TRACKING_FRAGMENT);
-                    break;
-            }
-            return true;
-        }
-    };
+import java.io.InputStream;
+import java.io.OutputStream;
 
-    /**
-     * Called for each activity. Perform work on the first start of the activity.
-     * @param savedInstanceState
-     */
+import static android.content.ContentValues.TAG;
+
+public class MainActivity extends IOIOActivity {
+    private Button payloadBtn;
+    static final String STR_LAUNCH = "l";
+    static final String STR_DATA_COMM = "dc";
+
     @Override
-    protected void onCreate(Bundle savedInstanceState) {
+    public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        viewPager = findViewById(R.id.view_pager);
-        viewPager.setAdapter(new AppFragmentPagerAdapter(getSupportFragmentManager()));
+        payloadBtn = (Button)findViewById(R.id.launch_button);
+    }
 
-        // add bottom navigation.
-        BottomNavigationView navigation = findViewById(R.id.navigation);
-        navigation.setOnNavigationItemSelectedListener(onNavigationItemSelectedListener);
+    class Looper extends BaseIOIOLooper {
+        private final static int BAUD_RATE = 57600;
+        Uart uart;
+        private InputStream istream;
+        private OutputStream ostream;
 
-        startService(new Intent(this, CommuncationService.class));
+        @Override
+        protected void setup() throws ConnectionLostException {
+            uart = ioio_.openUart(36, 34, BAUD_RATE, Uart.Parity.NONE, Uart.StopBits.ONE);
+            istream =  uart.getInputStream();
+            ostream = uart.getOutputStream();
 
-        finish();
+            payloadBtn.setOnClickListener(new View.OnClickListener() {
+                public void onClick(View view) {
+                    JSONObject jsonObject = new JSONObject();
+                    try {
+                        jsonObject.put("state",STR_LAUNCH);
+                        jsonObject.put("data","");
+                        ostream.write((jsonObject.toString() + "\n").getBytes());
+                    } catch(Exception ex) {
+                        Log.e(TAG, ex.getMessage());
+                    }
+                }
+            }) ;
+        }
+
+        @Override
+        public void loop() throws ConnectionLostException {
+            JSONObject jsonObject = new JSONObject();
+            try {
+                byte[] roverData = new byte[77];
+                int a = istream.read(roverData);
+                String dataStr = new String(roverData);
+                if (dataStr.charAt(0) == '{'){
+                    dataStr = "{"+dataStr;
+                }
+                if (dataStr.charAt(dataStr.length()-1) == '{') {
+                    dataStr = dataStr + "}";
+                }
+                Log.e(TAG, dataStr);
+                Thread.sleep(1000);
+            }
+            catch(Exception ex){
+                Log.e("ERROR CONTROL APP",ex.getMessage(), ex);
+            }
+        }
+    }
+
+
+    @Override
+    protected Looper createIOIOLooper() {
+        Log.i("Control app", "called ioio thread!");
+        return new Looper();
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -7,38 +7,22 @@ import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 import android.os.IBinder;
-import android.util.Log;
 import android.widget.Toast;
 
 import java.io.IOException;
 import java.io.OutputStream;
 
-import ioio.lib.api.DigitalOutput;
-import ioio.lib.api.IOIO;
 import ioio.lib.api.IOIOFactory;
 import ioio.lib.api.Uart;
 import ioio.lib.api.exception.ConnectionLostException;
-import ioio.lib.api.exception.IncompatibilityException;
 import ioio.lib.util.BaseIOIOLooper;
-import ioio.lib.util.IOIOConnectionRegistry;
 import ioio.lib.util.IOIOLooper;
 import ioio.lib.util.android.IOIOService;
 
-import static android.content.ContentValues.TAG;
 
 public class CommuncationService extends IOIOService
 {
     // refecnce to parent activity
-    Activity parentActivity;
-
-    /**
-     * Communication thread constructor
-     * @param activity
-     */
-    public CommuncationService(Activity activity){
-        this.parentActivity = activity;
-    }
-
 
     @Override
     protected IOIOLooper createIOIOLooper() {
@@ -48,7 +32,6 @@ public class CommuncationService extends IOIOService
 
             @Override
             protected void setup() throws ConnectionLostException, InterruptedException {
-                ioio_ = IOIOFactory.create();
                 Thread.sleep(5000);
                 //led_ = ioio_.openDigitalOutput(0, true);
                 uart = ioio_.openUart(35,34,57600, Uart.Parity.NONE, Uart.StopBits.ONE);
@@ -61,7 +44,8 @@ public class CommuncationService extends IOIOService
                     Thread.sleep(100);
                 }
                 catch (IOException ex) {
-                    showToast("CommunicationThread: "+ ex.getMessage());
+                    //showToast("CommunicationThread: "+ ex.getMessage());
+                    Toast.makeText(getApplicationContext(), ex.getMessage(), Toast.LENGTH_LONG).show();
                 }
             }
         };
@@ -79,10 +63,9 @@ public class CommuncationService extends IOIOService
         } else {
             // Service starting. Create a notification.
             Notification notification =
-            new Notification.Builder(parentActivity.getApplicationContext())
+            new Notification.Builder(getApplicationContext())
                     .setContentTitle("CommunicationService")
                     .setContentText("Connected! click to stop.")
-                    .setSmallIcon(R.drawable.ic_dashboard_black_24dp)
                     .build();
             notification.flags |= Notification.FLAG_ONGOING_EVENT;
             nm.notify(0, notification);
@@ -94,15 +77,5 @@ public class CommuncationService extends IOIOService
     @Override
     public IBinder onBind(Intent arg0) {
         return null;
-    }
-
-    private void showToast(final String message) {
-        final Context context = parentActivity.getApplicationContext();
-        parentActivity.runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                Toast.makeText(context, message, Toast.LENGTH_LONG).show();
-            }
-        });
     }
 }
