@@ -4,6 +4,7 @@
 #include "SoftwareSerial.h"
 #include "ArduinoJson.h"
 #include "SCServo.h"
+#include "deps.h"
 
 using HandlerCallbackType = void(*)();
 #define RadioSerial Serial1
@@ -57,13 +58,13 @@ private:
     servoCtrl.wheelMode(ServoID::WHEEL_SERVO_TWO);
     servoCtrl.WriteSpe(ServoID::WHEEL_SERVO_ONE, -2);
     scope = new Gyroscope();
-      scope->read();
+    scope->read();
     this->gravityVectorZ = scope->values.az;
     DEBUG("Exit state constructor");
   }
 public:
   /**
-   * Creates a new rover state to be used.0
+   * Creates a new rover state to be used.
 .
 * Adheres to the singleton pattern.
    * We should have only one rover state.
@@ -137,20 +138,20 @@ public:
    */
   void report() {
     scope->read();
-    int solVoltage = analogRead(SolarVoltage);
-    int batVoltage = analogRead(BatteryVoltage);
+    int solVoltage = (float(analogRead(SolarVoltage)) / 1023) * 5;
+    int batVoltage = (float(analogRead(BatteryVoltage)) / 1023) * 7.4;
     this->gravityVectorZ = scope->values.az;
-    String jsonStr = String("{")
-       + "ax:"+scope->values.ax + ","
-       + "ay:"+scope->values.ay + ","
-       + "az:"+scope->values.az + ","
-       + "gx:"+scope->values.gx + ","
-       + "gy:"+scope->values.gy + ","
-       + "gz:"+scope->values.gz + ","
-       + "bv:"+ (float(batVoltage) / 1023) * 7.4 + ","
-       + "sv:"+ (float(solVoltage) / 1023) * 5
-       +"}";
-    RadioSerial.println(jsonStr);
+    const String jsonStr = String("{")
+       + "ax:"+ extendHex(String(scope->values.ax, HEX)) + ","
+       + "ay:"+ extendHex(String(scope->values.ay, HEX)) + ","
+       + "az:"+ extendHex(String(scope->values.az, HEX)) + ","
+       + "gx:"+ extendHex(String(scope->values.gx, HEX)) + ","
+       + "gy:"+ extendHex(String(scope->values.gy, HEX)) + ","
+       + "gz:"+ extendHex(String(scope->values.gz, HEX)) + ","
+       + "bv:"+ extendHex(String(batVoltage, HEX))       + ","
+       + "sv:"+ extendHex(String(solVoltage, HEX))       + "}";
+    char lenStrBuf[3];
+    RadioSerial.println(jsonStr + itoa(jsonStr.length(), lenStrBuf, 16));
     
     DEBUG(jsonStr);
   }
@@ -176,8 +177,9 @@ enum CommandCode : char { DE = 1, DA = 2, DS = 3 };
  * Will process commands for controlling the rover.
  * No commands for manual control.
  * cmd codes
- * DE = Deploy Rover, 1
+ * DE = Unlock Rover, 1
  * DA = Rover Data, 2
+ * DS = deploy solar panels, 3
  * see enum abover for definition.
  */
 void radioComm() 
