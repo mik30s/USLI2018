@@ -1,4 +1,4 @@
-#define DEBUG 0
+#define DEBUG 1
 #include "Arduino.h"
 #include "gyro.h"
 #include "SoftwareSerial.h"
@@ -9,6 +9,8 @@ using HandlerCallbackType = void(*)();
 #define RadioSerial Serial1
 #define ServoSerial Serial3 
 #define DebugSerial Serial
+#define SolarVoltage A15
+#define BatteryVoltage A14
 
 #ifdef DEBUG
   #define DEBUG(text) DebugSerial.println(text); 
@@ -135,6 +137,8 @@ public:
    */
   void report() {
     scope->read();
+    int solVoltage = analogRead(SolarVoltage);
+    int batVoltage = analogRead(BatteryVoltage);
     this->gravityVectorZ = scope->values.az;
     String jsonStr = String("{")
        + "ax:"+scope->values.ax + ","
@@ -142,9 +146,12 @@ public:
        + "az:"+scope->values.az + ","
        + "gx:"+scope->values.gx + ","
        + "gy:"+scope->values.gy + ","
-       + "gz:"+scope->values.gz
+       + "gz:"+scope->values.gz + ","
+       + "bv:"+ (float(batVoltage) / 1023) * 7.4 + ","
+       + "sv:"+ (float(solVoltage) / 1023) * 5
        +"}";
     RadioSerial.println(jsonStr);
+    
     DEBUG(jsonStr);
   }
 };
@@ -161,7 +168,7 @@ RoverState* state = nullptr;
  * DS = Deploy Solar Panels, 3
  * see radioComm function for full usage.
  */
-enum CommandCode { DE = 1, DA = 2, DS = 3 };
+enum CommandCode : char { DE = 1, DA = 2, DS = 3 };
 
 /**
  * Communicates with base station and rover.
@@ -182,6 +189,7 @@ void radioComm()
     const String jsonStr(RadioSerial.readStringUntil('\n'));
     JsonObject& object = jsonBuffer.parseObject(jsonStr);
     String cmd = object[String("cmd")];
+    DEBUG(cmd)
 
     if (cmd.toInt() == CommandCode::DE) {
       // deploy rover

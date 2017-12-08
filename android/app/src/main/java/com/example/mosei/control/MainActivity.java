@@ -19,8 +19,6 @@ import static android.content.ContentValues.TAG;
 
 public class MainActivity extends IOIOActivity {
     private Button payloadBtn;
-    static final String STR_LAUNCH = "l";
-    static final String STR_DATA_COMM = "dc";
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -46,9 +44,9 @@ public class MainActivity extends IOIOActivity {
                 public void onClick(View view) {
                     JSONObject jsonObject = new JSONObject();
                     try {
-                        jsonObject.put("state",STR_LAUNCH);
-                        jsonObject.put("data","");
+                        jsonObject.put("cmd",1);
                         ostream.write((jsonObject.toString() + "\n").getBytes());
+                        Log.i(TAG, jsonObject.toString());
                     } catch(Exception ex) {
                         Log.e(TAG, ex.getMessage());
                     }
@@ -60,16 +58,11 @@ public class MainActivity extends IOIOActivity {
         public void loop() throws ConnectionLostException {
             JSONObject jsonObject = new JSONObject();
             try {
-                byte[] roverData = new byte[77];
+                byte[] roverData = new byte[1024];
                 int a = istream.read(roverData);
                 String dataStr = new String(roverData);
-                if (dataStr.charAt(0) == '{'){
-                    dataStr = "{"+dataStr;
-                }
-                if (dataStr.charAt(dataStr.length()-1) == '{') {
-                    dataStr = dataStr + "}";
-                }
-                Log.e(TAG, dataStr);
+                JSONObject json = new JSONObject(dataStr);
+                Log.i(TAG, dataStr);
                 Thread.sleep(1000);
             }
             catch(Exception ex){
