@@ -1,5 +1,13 @@
 #pragma once
 
+#define RadioSerial Serial1
+#define ServoSerial Serial3 
+#define DebugSerial Serial
+#ifdef DEBUG
+  #define DEBUG(text) Serial.println(text); 
+#else
+  #define DEBUG(text)
+#endif
 
 #define INTERRUPT_PIN 43 // use pin 2 on Arduino Uno & most boards
 #include "Arduino.h"
@@ -31,10 +39,13 @@ public:
     #elif I2CDEV_IMPLEMENTATION == I2CDEV_BUILTIN_FASTWIRE
       Fastwire::setup(400, true);
     #endif
-    Serial.println("Initializing Gyroscope...");
+     
     gyroDevice.initialize();
+    DebugSerial.println("Gyro initialized.");
     if (!(values.isNone = gyroDevice.testConnection())) {
       Serial.println("Failed to initialize gyroscope.");
+    } else{
+     
     }
   }
 
