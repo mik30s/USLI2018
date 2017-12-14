@@ -56,7 +56,7 @@ private:
     servoCtrl.EnableTorque(ServoID::DEPLOYMENT_SERVO, 1);
     servoCtrl.wheelMode(ServoID::WHEEL_SERVO_ONE);
     servoCtrl.wheelMode(ServoID::WHEEL_SERVO_TWO);
-    servoCtrl.WriteSpe(ServoID::WHEEL_SERVO_ONE, -2);
+    servoCtrl.WriteSpe(ServoID::WHEEL_SERVO_ONE, 2000);
     scope = new Gyroscope();
     scope->read();
     this->gravityVectorZ = scope->values.az;
@@ -67,7 +67,7 @@ public:
    * Creates a new rover state to be used.
 .
 * Adheres to the singleton pattern.
-   * We should have only one rover state.
+   * We should have only one rover state.`
    */
   static RoverState* getInstance() {
     static RoverState* instance;
@@ -85,20 +85,20 @@ public:
     //static bool cw = false;
     //delay(3000);
     //cw = !cw;
-    if (this->gravityVectorZ  < 0) {
-      this->servoOneTiming = 2100;
-      this->servoTwoTiming = 2000;
-    } else {
-      this->servoOneTiming = 2000;
-      this->servoTwoTiming = 2100;  
-    }
+//    if (this->gravityVectorZ  < 0) {
+//      this->servoOneTiming = 2100;//2100;
+//      this->servoTwoTiming = 2100;//2000;
+//    } else {
+//      this->servoOneTiming = 2000;//2000;
+//      this->servoTwoTiming = 2000;//2100;  
+//    }
     // FLIP TIME VALUES TO MOVE IN REVERSE DIRECTION
     //if (!isLocked || !isDriving) 
     {
       //servoCtrl.WritePos(ServoID::WHEEL_SERVO_ONE, 1000, 2000, 0);
       //servoCtrl.WritePos(ServoID::WHEEL_SERVO_TWO, 1000, 2100, 0);
-      servoCtrl.WritePos(ServoID::WHEEL_SERVO_ONE, 1000, this->servoOneTiming);
-      servoCtrl.WritePos(ServoID::WHEEL_SERVO_TWO, 1000, this->servoTwoTiming);
+      servoCtrl.WritePos(ServoID::WHEEL_SERVO_ONE, 1000, this->servoOneTiming, 0);
+      servoCtrl.WritePos(ServoID::WHEEL_SERVO_TWO, 1000, this->servoTwoTiming, 0);
       isDriving = true;
     }
   }
@@ -115,10 +115,10 @@ public:
 
     if (this->gravityVectorZ  < 0) {
       this->servoOneTiming = 2100;
-      this->servoTwoTiming = 2000;
+      this->servoTwoTiming = 2100;
     } else {
       this->servoOneTiming = 2000;
-      this->servoTwoTiming = 2100;  
+      this->servoTwoTiming = 2000;  
     }
     
     // move unlocking servo
