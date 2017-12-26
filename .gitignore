@@ -40,6 +40,14 @@ captures/
 .idea/dictionaries
 .idea/libraries
 
+*.iml
+monitor/.idea/workspace.xml
+monitor/.idea/tasks.xml
+monitor/.idea/gradle.xml
+monitor/.idea/dictionaries
+monitor/.idea/libraries
+
+
 # Keystore files
 *.jks
 
