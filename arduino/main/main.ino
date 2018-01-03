@@ -1,4 +1,4 @@
-#define DEBUG 1
+#define DEBUG 0
 #include "Arduino.h"
 #include "gyro.h"
 #include "SoftwareSerial.h"
@@ -25,7 +25,7 @@ using HandlerCallbackType = void(*)();
  */
 struct RoverState 
 {
-private:  
+public:  
   bool isLocked;
   bool isDriving;
   SCServo servoCtrl;
@@ -41,7 +41,8 @@ private:
     LOCK_SERVO       = 3,
     DEPLOYMENT_SERVO = 4
   };
-  
+
+private:
   /**
    * Creates a rover state
    */
@@ -50,13 +51,14 @@ private:
   {
     DEBUG("Enter state constructor");
     servoCtrl.pSerial = &ServoSerial;
-    servoCtrl.EnableTorque(ServoID::WHEEL_SERVO_ONE, 1);
     servoCtrl.EnableTorque(ServoID::WHEEL_SERVO_TWO, 1);
     servoCtrl.EnableTorque(ServoID::LOCK_SERVO, 1);
     servoCtrl.EnableTorque(ServoID::DEPLOYMENT_SERVO, 1);
     servoCtrl.wheelMode(ServoID::WHEEL_SERVO_ONE);
-    servoCtrl.wheelMode(ServoID::WHEEL_SERVO_TWO);
-    servoCtrl.WriteSpe(ServoID::WHEEL_SERVO_ONE, 2000);
+    delay(500);
+    servoCtrl.EnableTorque(ServoID::WHEEL_SERVO_ONE, 1);
+    //servoCtrl.wheelMode(ServoID::WHEEL_SERVO_TWO);
+    //servoCtrl.WriteSpe(ServoID::WHEEL_SERVO_ONE, 2000);
     scope = new Gyroscope();
     scope->read();
     this->gravityVectorZ = scope->values.az;
@@ -82,23 +84,33 @@ public:
    */
   void drive() 
   {
+     if (this->gravityVectorZ  < 0) {
+      this->servoOneTiming = 1023;
+      this->servoTwoTiming = 1023;
+    } else {
+      this->servoOneTiming = -1023;
+      this->servoTwoTiming = -1023;  
+    }
     //static bool cw = false;
     //delay(3000);
     //cw = !cw;
 //    if (this->gravityVectorZ  < 0) {
 //      this->servoOneTiming = 2100;//2100;
-//      this->servoTwoTiming = 2100;//2000;
+//      this->servoTwoTiming = 2000;//2000;
 //    } else {
 //      this->servoOneTiming = 2000;//2000;
-//      this->servoTwoTiming = 2000;//2100;  
+//      this->servoTwoTiming = 2100;//2100;  
 //    }
     // FLIP TIME VALUES TO MOVE IN REVERSE DIRECTION
     //if (!isLocked || !isDriving) 
     {
       //servoCtrl.WritePos(ServoID::WHEEL_SERVO_ONE, 1000, 2000, 0);
       //servoCtrl.WritePos(ServoID::WHEEL_SERVO_TWO, 1000, 2100, 0);
-      servoCtrl.WritePos(ServoID::WHEEL_SERVO_ONE, 1000, this->servoOneTiming, 0);
-      servoCtrl.WritePos(ServoID::WHEEL_SERVO_TWO, 1000, this->servoTwoTiming, 0);
+      //servoCtrl.WritePos(ServoID::WHEEL_SERVO_ONE, 1000, this->servoOneTiming, 0);
+      //servoCtrl.WritePos(ServoID::WHEEL_SERVO_TWO, 1000, this->servoTwoTiming, 0);
+      servoCtrl.WriteSpe(1, this->servoOneTiming);
+      //servoCtrl.WriteSpe(2, this->servoOneTiming);
+      //servoCtrl.WriteSpe(ServoID::WHEEL_SERVO_TWO, this->servoTwoTiming);
       isDriving = true;
     }
   }
@@ -113,12 +125,19 @@ public:
     scope->read();
     this->gravityVectorZ = scope->values.az;
 
+//    if (this->gravityVectorZ  < 0) {
+//      this->servoOneTiming = 2100;
+//      this->servoTwoTiming = 2000;
+//    } else {
+//      this->servoOneTiming = 2000;
+//      this->servoTwoTiming = 2100;  
+//    }
     if (this->gravityVectorZ  < 0) {
-      this->servoOneTiming = 2100;
-      this->servoTwoTiming = 2100;
+      this->servoOneTiming = 1023;
+      this->servoTwoTiming = 1023;
     } else {
-      this->servoOneTiming = 2000;
-      this->servoTwoTiming = 2000;  
+      this->servoOneTiming = -1023;
+      this->servoTwoTiming = -1023;  
     }
     
     // move unlocking servo
@@ -204,6 +223,20 @@ void radioComm()
       state->deploy();
     }
   }
+//  if (state->gravityVectorZ  < 0) {
+//      state->servoOneTiming = 2100;//2100;
+//      state->servoTwoTiming = 2000;//2000;
+//  } else {
+//      state->servoOneTiming = 2000;//2000;
+//      state->servoTwoTiming = 2100;//2100;  
+//  }
+    if (state->gravityVectorZ  < 0) {
+      state->servoOneTiming = 1023;
+      state->servoTwoTiming = 1023;
+    } else {
+      state->servoOneTiming = -1023;
+      state->servoTwoTiming = -1023;  
+    }
 }
 
 /**
@@ -248,7 +281,7 @@ void loop()
    millisHandler(200, radioComm);
    // move rover 
    state->drive();
-   state->report();
+   //state->report();
 }
 
 

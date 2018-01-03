@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import java.lang.*?>
+<?import java.util.*?>
+<?import javafx.scene.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<?import javafx.scene.chart.AreaChart?>
+<?import javafx.scene.chart.NumberAxis?>
+<?import javafx.scene.text.Text?>
+<GridPane xmlns="http://javafx.com/javafx"
+          xmlns:fx="http://javafx.com/fxml"
+          fx:controller="sample.Main"
+          prefHeight="800.0" prefWidth="1024.0">
+    <AreaChart fx:id="gyro_graph" GridPane.columnIndex="0" GridPane.rowIndex="1">
+        <xAxis><NumberAxis /></xAxis>
+        <yAxis><NumberAxis /></yAxis>
+    </AreaChart>
+    <AreaChart fx:id="acceleration_graph" GridPane.columnIndex="1" GridPane.rowIndex="1">
+        <xAxis><NumberAxis tickUnit="50" /></xAxis>
+        <yAxis><NumberAxis /></yAxis>
+    </AreaChart>
+    <HBox fx:id="gyro_values" GridPane.columnIndex="0" GridPane.rowIndex="2">
+        <Text>GX</Text>
+        <Text>GY</Text>
+        <Text>GZ</Text>
+    </HBox>
+</GridPane>
