@@ -8,6 +8,11 @@ import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
+import android.widget.Checkable;
+import android.widget.CompoundButton;
+import android.widget.ToggleButton;
+
+import org.json.JSONException;
 import org.json.JSONObject;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -15,17 +20,20 @@ import java.io.OutputStream;
 import static android.content.ContentValues.TAG;
 
 public class MainActivity extends IOIOActivity {
-    private Button launchRoverButton;
-    private final int ROVER_COMM_DE = 1; // unlock, orient and deploy rover
+    private ToggleButton driveRoverToggleButton;
+    private ToggleButton lockRoverToggleButton;
+    private final int ROVER_COMM_DE = 1; // unlock, orient and rover
     private final int ROVER_COMM_DA = 2; // report data on values and sensors
     private final int ROVER_COMM_DS = 3; // deploy solar panels.
+    private final int ROVER_COMM_DR = 4; // start rover drive.
 
     @Override
     public void onCreate(Bundle savedInstanceState)
     {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        launchRoverButton = (Button)findViewById(R.id.launch_button);
+        driveRoverToggleButton = findViewById(R.id.driveToggleButton);
+        lockRoverToggleButton = findViewById(R.id.lockToggleButton);
     }
 
     class Looper extends BaseIOIOLooper
@@ -53,20 +61,47 @@ public class MainActivity extends IOIOActivity {
             ostream = uart.getOutputStream();
 
             // add listener for rover deployment
-            launchRoverButton.setOnClickListener(new View.OnClickListener()
-            {
-                public void onClick(View view)
-                {
-                    JSONObject jsonObject = new JSONObject();
-                    try {
-                        jsonObject.put("cmd", ROVER_COMM_DE);
-                        ostream.write((jsonObject.toString() + "\n").getBytes());
-                        Log.i(TAG, jsonObject.toString());
-                    } catch(Exception ex) {
-                        Log.e(TAG, ex.getMessage());
-                    }
-                }
-            });
+            driveRoverToggleButton.setOnCheckedChangeListener(
+                    new CompoundButton.OnCheckedChangeListener() {
+                        @Override
+                        public void onCheckedChanged
+                        (CompoundButton compoundButton, boolean b) {
+                            JSONObject jsonObject = new JSONObject();
+                            try {
+                                jsonObject.put("cmd", ROVER_COMM_DR);
+                                if (b == true) {
+                                    jsonObject.put("aux", 0);
+                                } else {
+                                    jsonObject.put("aux", 1);
+                                }
+                                ostream.write((jsonObject.toString() + "\n").getBytes());
+                                Log.i(TAG, jsonObject.toString());
+                            } catch(Exception ex) {
+                                Log.e(TAG, ex.getMessage());
+                            }
+                        }
+                    });
+
+            lockRoverToggleButton.setOnCheckedChangeListener(
+                    new CompoundButton.OnCheckedChangeListener() {
+                        @Override
+                        public void onCheckedChanged
+                        (CompoundButton compoundButton, boolean b) {
+                            JSONObject jsonObject = new JSONObject();
+                            try {
+                                jsonObject.put("cmd", ROVER_COMM_DE);
+                                if (b == true) {
+                                    jsonObject.put("aux", 0);
+                                } else {
+                                    jsonObject.put("aux", 1);
+                                }
+                                ostream.write((jsonObject.toString() + "\n").getBytes());
+                                Log.i(TAG, jsonObject.toString());
+                            } catch(Exception ex) {
+                                Log.e(TAG, ex.getMessage());
+                            }
+                        }
+                    });
         }
 
         @Override

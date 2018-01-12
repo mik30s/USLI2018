@@ -1,4 +1,3 @@
-#define DEBUG 0
 #include "Arduino.h"
 #include "gyro.h"
 #include "SoftwareSerial.h"
@@ -12,6 +11,7 @@ using HandlerCallbackType = void(*)();
 #define DebugSerial Serial
 #define SolarVoltage A15
 #define BatteryVoltage A14
+
 
 #ifdef DEBUG
   #define DEBUG(text) DebugSerial.println(text); 
@@ -38,8 +38,8 @@ public:
   {
     WHEEL_SERVO_ONE  = 1,
     WHEEL_SERVO_TWO  = 2, 
-    LOCK_SERVO       = 3,
-    DEPLOYMENT_SERVO = 4
+    DEPLOYMENT_SERVO = 3,
+    LOCK_SERVO       = 4
   };
 
 private:
@@ -49,7 +49,7 @@ private:
   RoverState():
     isLocked(true), isDriving(false)
   {
-    DEBUG("Enter state constructor");
+    //DEBUG("Enter state constructor");
     servoCtrl.pSerial = &ServoSerial;
     servoCtrl.EnableTorque(ServoID::WHEEL_SERVO_TWO, 1);
     servoCtrl.EnableTorque(ServoID::LOCK_SERVO, 1);
@@ -62,7 +62,7 @@ private:
     scope = new Gyroscope();
     scope->read();
     this->gravityVectorZ = scope->values.az;
-    DEBUG("Exit state constructor");
+    //DEBUG("Exit state constructor");
   }
 public:
   /**
@@ -84,34 +84,12 @@ public:
    */
   void drive() 
   {
-     if (this->gravityVectorZ  < 0) {
-      this->servoOneTiming = 1023;
-      this->servoTwoTiming = 1023;
-    } else {
-      this->servoOneTiming = -1023;
-      this->servoTwoTiming = -1023;  
-    }
-    //static bool cw = false;
-    //delay(3000);
-    //cw = !cw;
-//    if (this->gravityVectorZ  < 0) {
-//      this->servoOneTiming = 2100;//2100;
-//      this->servoTwoTiming = 2000;//2000;
-//    } else {
-//      this->servoOneTiming = 2000;//2000;
-//      this->servoTwoTiming = 2100;//2100;  
-//    }
-    // FLIP TIME VALUES TO MOVE IN REVERSE DIRECTION
-    //if (!isLocked || !isDriving) 
-    {
-      //servoCtrl.WritePos(ServoID::WHEEL_SERVO_ONE, 1000, 2000, 0);
-      //servoCtrl.WritePos(ServoID::WHEEL_SERVO_TWO, 1000, 2100, 0);
-      //servoCtrl.WritePos(ServoID::WHEEL_SERVO_ONE, 1000, this->servoOneTiming, 0);
-      //servoCtrl.WritePos(ServoID::WHEEL_SERVO_TWO, 1000, this->servoTwoTiming, 0);
+    if (isDriving == true) {   
+      //DEBUG("Is driving")
       servoCtrl.WriteSpe(1, this->servoOneTiming);
-      //servoCtrl.WriteSpe(2, this->servoOneTiming);
-      //servoCtrl.WriteSpe(ServoID::WHEEL_SERVO_TWO, this->servoTwoTiming);
-      isDriving = true;
+    } else {
+      //DEBUG("Is not driving")
+      servoCtrl.WriteSpe(1, 0);  
     }
   }
   
@@ -119,19 +97,11 @@ public:
    * @brief Unlocks the rover from
    * Docking bay.
    */
-  void unlock() 
+  void unlock(bool lock) 
   {
     // orient rover using gyro readings.
     scope->read();
     this->gravityVectorZ = scope->values.az;
-
-//    if (this->gravityVectorZ  < 0) {
-//      this->servoOneTiming = 2100;
-//      this->servoTwoTiming = 2000;
-//    } else {
-//      this->servoOneTiming = 2000;
-//      this->servoTwoTiming = 2100;  
-//    }
     if (this->gravityVectorZ  < 0) {
       this->servoOneTiming = 1023;
       this->servoTwoTiming = 1023;
@@ -139,9 +109,17 @@ public:
       this->servoOneTiming = -1023;
       this->servoTwoTiming = -1023;  
     }
+    delay(500);
     
     // move unlocking servo
-    isLocked = false;
+    if(lock == false){
+      servoCtrl.WritePos(ServoID::LOCK_SERVO,350,1000);
+      delay(1000);
+    } else {
+      servoCtrl.WritePos(ServoID::LOCK_SERVO,0,1000);
+      delay(1000);
+    }
+    isLocked = lock;
   }
 
   /**
@@ -188,7 +166,7 @@ RoverState* state = nullptr;
  * DS = Deploy Solar Panels, 3
  * see radioComm function for full usage.
  */
-enum CommandCode : char { DE = 1, DA = 2, DS = 3 };
+enum CommandCode : char { DE = 1, DA = 2, DS = 3, DR = 4};
 
 /**
  * Communicates with base station and rover.
@@ -205,38 +183,48 @@ void radioComm()
 {
   DEBUG("Radio comm called.");
   DynamicJsonBuffer jsonBuffer;
-  if (RadioSerial.available()) 
-  {
+//  if (RadioSerial.available()) 
+//  {
     const String jsonStr(RadioSerial.readStringUntil('\n'));
     JsonObject& object = jsonBuffer.parseObject(jsonStr);
     String cmd = object[String("cmd")];
-    DEBUG(cmd)
-
+    
     if (cmd.toInt() == CommandCode::DE) {
-      // deploy rover
-      state->unlock();
+      // unlock rover
+      String aux = object[String("aux")];
+      DEBUG("cmd: " + cmd)
+      DEBUG("aux: " + aux)
+      // if 1 then unlock the rover
+      // else lock it back in
+      if(aux.toInt() == 1){
+        state->unlock(true);
+      } else {
+        // lock the rover in
+        state->unlock(false);
+      }
     } else if (cmd.toInt() == CommandCode::DA) {
       // send data to base station
       state->report();
     } else if (cmd.toInt() == CommandCode::DS) {
       // deploy solar panels
       state->deploy();
+    } else if (cmd.toInt() == CommandCode::DR) {
+      // deploy rover
+      String aux = object[String("aux")];
+      DEBUG("cmd: " + cmd)
+      DEBUG("aux: " + aux)
+      // if 1 then drive the rover
+      // else stop
+      if(aux.toInt() == 1){
+        state->isDriving = true;
+      } else if(aux.toInt() == 0){
+        // lock the rover in
+        state->isDriving = false;
+      }
     }
-  }
-//  if (state->gravityVectorZ  < 0) {
-//      state->servoOneTiming = 2100;//2100;
-//      state->servoTwoTiming = 2000;//2000;
 //  } else {
-//      state->servoOneTiming = 2000;//2000;
-//      state->servoTwoTiming = 2100;//2100;  
+//    DEBUG("No radio comm.")
 //  }
-    if (state->gravityVectorZ  < 0) {
-      state->servoOneTiming = 1023;
-      state->servoTwoTiming = 1023;
-    } else {
-      state->servoOneTiming = -1023;
-      state->servoTwoTiming = -1023;  
-    }
 }
 
 /**
@@ -259,7 +247,7 @@ void millisHandler(uint64_t duration, HandlerCallbackType callback)
  * onboard firmware
  */
 void setup() 
-{
+{ 
   // Serial for debugging
   DebugSerial.begin(9600);
   // Serial connection to onboard radio
@@ -277,6 +265,16 @@ void setup()
  */
 void loop() 
 {
+    // orient rover using gyro readings.
+    state->scope->read();
+    state->gravityVectorZ = state->scope->values.az;
+    if (state->gravityVectorZ  < 0) {
+      state->servoOneTiming = 1023;
+      state->servoTwoTiming = 1023;
+    } else {
+      state->servoOneTiming = -1023;
+      state->servoTwoTiming = -1023;  
+    }
    // process base station commands every second
    millisHandler(200, radioComm);
    // move rover 
