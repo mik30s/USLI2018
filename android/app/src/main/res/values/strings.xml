@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Control</string>
+    <string name="app_name">Rover Control</string>
     <string name="launch_btn_text">Launch Rover</string>
     <string name="title_tracking">Tracking</string>
     <string name="title_radio">Radio</string>

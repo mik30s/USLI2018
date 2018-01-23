@@ -7,6 +7,8 @@ import org.json.JSONObject;
 import java.io.InputStream;
 import java.io.OutputStream;
 
+import android.widget.ArrayAdapter;
+import android.widget.ListView;
 import android.widget.ScrollView;
 import android.widget.SeekBar;
 import android.widget.Switch;
@@ -31,7 +33,11 @@ public class MainActivity extends IOIOActivity
     private Switch lockSwitch;
     private Switch driveSwitch;
     private TextView driveSpeedText;
-    private SeekBar driveSpeedScroll;
+    private SeekBar driveSpeedSeek;
+
+    private ListView packetListView;
+    private ArrayAdapter<String> packetListAdapter;
+    private String[] packetDataStrings = new String[8];
 
     @Override
 
@@ -41,8 +47,24 @@ public class MainActivity extends IOIOActivity
 
         lockSwitch = findViewById(R.id.lockSwitch);
         driveSwitch = findViewById(R.id.driveSwitch);
-        driveSpeedScroll = findViewById(R.id.driveSpeedScroll);
-        driveSpeedText = findViewById(R.id.driveSpeedText);
+        driveSwitch.setChecked(false);
+        driveSpeedSeek = findViewById(R.id.speedSeek);
+        driveSpeedSeek.setEnabled(false);
+        driveSpeedText = findViewById(R.id.speedText);
+        packetListView = findViewById(R.id.packet_values_list);
+
+        packetDataStrings[0] = "Gyro. X - 0.000";
+        packetDataStrings[1] = "Gyro. Y - 0.000";
+        packetDataStrings[2] = "Gyro. Z - 0.000";
+        packetDataStrings[3] = "Accl. X - 0.000";
+        packetDataStrings[4] = "Accl. Y - 0.000";
+        packetDataStrings[5] = "Accl. Z - 0.000";
+        packetDataStrings[6] = "Sol.  V - 0.000";
+        packetDataStrings[7] = "Bat.  V - 0.000";
+
+        packetListAdapter = new ArrayAdapter<String>(this,
+                android.R.layout.simple_list_item_1, packetDataStrings);
+        packetListView.setAdapter(packetListAdapter);
     }
 
     class Looper extends BaseIOIOLooper
@@ -90,24 +112,29 @@ public class MainActivity extends IOIOActivity
             driveSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
                 @Override
                 public void onCheckedChanged(CompoundButton compoundButton, boolean b) {
-                    sendControlValues(
-            "{" +
-                    "\"cmd\":\"" + ROVER_COMM_DRIVE+ "\"," +
-                    "\"aux\":\"" + (b ? 1 : 0) + "\"," +
-                    "\"speed\":\"" + driveSpeedScroll.getProgress()+"\"" +"}"
-                    );
-                }
-            });
-
-            driveSpeedScroll.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-                @Override
-                public void onProgressChanged(SeekBar seekBar, int i, boolean b) {
-                    driveSpeedText.setText(i+"");
+                    if (b) {
+                        driveSpeedSeek.setEnabled(true);
+                    } else {
+                        driveSpeedSeek.setEnabled(false);
+                    }
                     sendControlValues(
                             "{" +
                                     "\"cmd\":\"" + ROVER_COMM_DRIVE+ "\"," +
                                     "\"aux\":\"" + (b ? 1 : 0) + "\"," +
-                                    "\"speed\":\"" + driveSpeedScroll.getProgress()+"\"" +"}"
+                                    "\"speed\":\"" + driveSpeedSeek.getProgress()+"\"" +"}"
+                    );
+                }
+            });
+
+            driveSpeedSeek.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+                @Override
+                public void onProgressChanged(SeekBar seekBar, int i, boolean b) {
+                    driveSpeedText.setText("x"+ i);
+                    sendControlValues(
+                            "{" +
+                                    "\"cmd\":\"" + ROVER_COMM_DRIVE+ "\"," +
+                                    "\"aux\":\"" + (b ? 1 : 0) + "\"," +
+                                    "\"speed\":\"" + driveSpeedSeek.getProgress()+"\"" +"}"
                     );
                 }
 
@@ -123,7 +150,6 @@ public class MainActivity extends IOIOActivity
 
         @Override
         public void loop() throws ConnectionLostException {
-
         }
     }
 
