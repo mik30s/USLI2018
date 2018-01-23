@@ -12,9 +12,14 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent">
 
+        <com.github.mikephil.charting.charts.LineChart
+            android:id="@+id/voltage_chart"
+            android:layout_width="match_parent"
+            android:layout_height="157dp"></com.github.mikephil.charting.charts.LineChart>
+
         <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="71dp"
+            android:layout_height="@android:dimen/app_icon_size"
             android:orientation="vertical">
 
             <LinearLayout
@@ -22,25 +27,6 @@
                 android:layout_height="wrap_content"
                 android:orientation="horizontal">
 
-                <TextView
-                    android:id="@+id/driveLabel"
-                    android:layout_width="28dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="Drive"
-                    android:textAlignment="center"
-                    android:textAppearance="@style/TextAppearance.AppCompat.Body1"
-                    android:textSize="18sp" />
-
-                <TextView
-                    android:id="@+id/lockLabel"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="Lock"
-                    android:textAlignment="center"
-                    android:textAppearance="@style/TextAppearance.AppCompat.Body1"
-                    android:textSize="18sp" />
             </LinearLayout>
 
             <LinearLayout
@@ -48,26 +34,64 @@
                 android:layout_height="match_parent"
                 android:orientation="horizontal">
 
-                <ToggleButton
-                    android:id="@+id/driveToggleButton"
-                    android:layout_width="178dp"
-                    android:layout_height="wrap_content"
+                <Switch
+                    android:id="@+id/driveSwitch"
+                    android:layout_width="wrap_content"
+                    android:layout_height="match_parent"
                     android:layout_weight="1"
-                    android:text="ToggleButton" />
+                    android:fontFamily="sans-serif"
+                    android:text="Drive"
+                    android:textAlignment="center"
+                    android:textSize="18sp" />
 
-                <ToggleButton
-                    android:id="@+id/lockToggleButton"
-                    android:layout_width="187dp"
-                    android:layout_height="wrap_content"
+                <Switch
+                    android:id="@+id/lockSwitch"
+                    android:layout_width="wrap_content"
+                    android:layout_height="match_parent"
                     android:layout_weight="1"
-                    android:text="ToggleButton" />
+                    android:text="Lock"
+                    android:textAlignment="center"
+                    android:textSize="18sp" />
             </LinearLayout>
         </LinearLayout>
 
-        <com.github.mikephil.charting.charts.LineChart
-            android:id="@+id/voltage_chart"
+        <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="157dp"></com.github.mikephil.charting.charts.LineChart>
+            android:layout_height="74dp"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/speedLabel"
+                android:layout_width="match_parent"
+                android:layout_height="29dp"
+                android:text="Drive Speed"
+                android:textAlignment="center"
+                android:textSize="18sp" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:orientation="horizontal">
+
+                <SeekBar
+                    android:id="@+id/driveSpeedScroll"
+                    android:layout_width="600dp"
+                    android:layout_height="44dp"
+                    android:layout_weight="1"
+                    android:max="5" />
+
+                <TextView
+                    android:id="@+id/driveSpeedText"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"
+                    android:text="0"
+                    android:textAlignment="center"
+                    android:textSize="18sp" />
+
+            </LinearLayout>
+
+        </LinearLayout>
 
 
     </LinearLayout>
