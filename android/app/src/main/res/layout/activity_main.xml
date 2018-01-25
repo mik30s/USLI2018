@@ -40,6 +40,14 @@
                     android:textAlignment="center" />
 
                 <Switch
+                    android:id="@+id/solarSwitch"
+                    android:layout_width="wrap_content"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"
+                    android:text="Solar"
+                    android:textAlignment="center" />
+
+                <Switch
                     android:id="@+id/lockSwitch"
                     android:layout_width="wrap_content"
                     android:layout_height="match_parent"
@@ -69,7 +77,7 @@
                     android:id="@+id/speedSeek"
                     style="@style/Widget.AppCompat.SeekBar.Discrete"
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
+                    android:layout_height="50dp"
                     android:max="10"
                     android:progress="3" />
 

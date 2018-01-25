@@ -26,7 +26,7 @@ public:
   SCServo servoCtrl;
   Gyroscope* scope;
   long gravityVectorZ;
-  bool isLocked, isDriving;
+  bool isLocked, isDriving, isDeployed;
   long driveSpeed;
 
 private:
@@ -69,9 +69,9 @@ public:
     // move rover 
     this->gravityVectorZ = scope->read().az;
     if (this->gravityVectorZ < 0) {
-      v = 511;
+      v = 127;
     } else if(gravityVectorZ > 0)  {
-      v = -511;
+      v = -127;
     }
 
     if (isDriving) { 
@@ -100,7 +100,7 @@ public:
     
     // move unlocking servo
     if(isLocked == false){
-      servoCtrl.WritePos(ServoID::LOCK_SERVO,350,1000);
+      servoCtrl.WritePos(ServoID::LOCK_SERVO,300,1000);
       delay(1000);
     } else {
       servoCtrl.WritePos(ServoID::LOCK_SERVO,0,1000);
@@ -117,7 +117,7 @@ public:
     int batVoltage = (float(analogRead(BatteryVoltage)) / 1023) * 7.4;
     this->gravityVectorZ = scope->values.az;
     const String jsonStr = String("{")
-       + "ax:"+ extendHex(String(scope->values.ax, HEX)) + ","
+       + "ax:"+ extendHex(String(scope->values.ax, HEX)) + ","      
        + "ay:"+ extendHex(String(scope->values.ay, HEX)) + ","
        + "az:"+ extendHex(String(scope->values.az, HEX)) + ","
        + "gx:"+ extendHex(String(scope->values.gx, HEX)) + ","
@@ -131,7 +131,16 @@ public:
     DEBUG(jsonStr);
   }
 
-  void deploy(){}
+  void deploy(){
+     // move unlocking servo
+    if(isDeployed == false){
+      servoCtrl.WritePos(ServoID::DEPLOYMENT_SERVO,500,3000);
+      delay(1000);
+    } else {
+      servoCtrl.WritePos(ServoID::DEPLOYMENT_SERVO,0,3000);
+      delay(1000);
+    }
+  }
 };
 
 /**
@@ -176,6 +185,9 @@ void radioComm()
   } else if (cmd.toInt() == CommandCode::DA) {
     state->report();
   } else if (cmd.toInt() == CommandCode::DS) {
+    String aux = object[String("aux")];
+    DebugSerial.println("cmd: " + cmd + " aux: " + aux);
+    state->isDeployed= bool(aux.toInt());
     state->deploy();
   } 
   else if (cmd.toInt() == CommandCode::DR) 
@@ -185,7 +197,7 @@ void radioComm()
     DebugSerial.println("cmd: " + cmd + " aux: " + aux);
     state->isDriving = bool(aux.toInt());
     String dSpeed = object[String("speed")];
-    state->driveSpeed = dSpeed.toIn t();
+    state->driveSpeed = dSpeed.toInt();
  }
 }
 
@@ -217,6 +229,9 @@ void setup() {
  
   state = RoverState::getInstance();
   // lock the servo
+  state->servoCtrl.WritePos(state->ServoID::DEPLOYMENT_SERVO, 500,1000);  
+//  delay(2000);
+//  state->servoCtrl.WritePos(state->ServoID::DEPLOYMENT_SERVO, 0,1000);  
   state->servoCtrl.WritePos(state->ServoID::LOCK_SERVO,0,1000);
 }
 

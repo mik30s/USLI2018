@@ -32,6 +32,7 @@ public class MainActivity extends IOIOActivity
     // UI references
     private Switch lockSwitch;
     private Switch driveSwitch;
+    private Switch solarSwitch;
     private TextView driveSpeedText;
     private SeekBar driveSpeedSeek;
 
@@ -46,10 +47,15 @@ public class MainActivity extends IOIOActivity
         setContentView(R.layout.activity_main);
 
         lockSwitch = findViewById(R.id.lockSwitch);
+        lockSwitch.setChecked(false);
+        solarSwitch = findViewById(R.id.solarSwitch);
+        solarSwitch.setChecked(false);
         driveSwitch = findViewById(R.id.driveSwitch);
         driveSwitch.setChecked(false);
         driveSpeedSeek = findViewById(R.id.speedSeek);
         driveSpeedSeek.setEnabled(false);
+
+        driveSpeedSeek.setProgress(1);
         driveSpeedText = findViewById(R.id.speedText);
         packetListView = findViewById(R.id.packet_values_list);
 
@@ -104,7 +110,17 @@ public class MainActivity extends IOIOActivity
                 public void onCheckedChanged(CompoundButton compoundButton, boolean b) {
                     sendControlValues("{" +
                     "\"cmd\":\"" + ROVER_COMM_UNLOCK + "\"," +
-                    "\"aux\":\"" + (b ? 1 : 0) + "\"," + "}"
+                    "\"aux\":\"" + (b ? 1 : 0) + "\"" + "}"
+                    );
+                }
+            });
+
+            solarSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+                @Override
+                public void onCheckedChanged(CompoundButton compoundButton, boolean b) {
+                    sendControlValues("{" +
+                            "\"cmd\":\"" + ROVER_COMM_SOLAR + "\"," +
+                            "\"aux\":\"" + (b ? 1 : 0) + "\"" + "}"
                     );
                 }
             });
