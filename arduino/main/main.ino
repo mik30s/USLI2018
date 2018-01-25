@@ -185,7 +185,7 @@ void radioComm()
     DebugSerial.println("cmd: " + cmd + " aux: " + aux);
     state->isDriving = bool(aux.toInt());
     String dSpeed = object[String("speed")];
-    state->driveSpeed = dSpeed.toInt();
+    state->driveSpeed = dSpeed.toIn t();
  }
 }
 
