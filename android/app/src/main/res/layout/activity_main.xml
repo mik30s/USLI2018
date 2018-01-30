@@ -14,10 +14,71 @@
         android:layout_height="match_parent"
         android:orientation="horizontal">
 
-        <lecho.lib.hellocharts.view.LineChartView
-            android:id="@+id/chart"
+        <LinearLayout
             android:layout_width="648dp"
-            android:layout_height="match_parent" />
+            android:layout_height="match_parent"
+            android:orientation="vertical">
+
+            <lecho.lib.hellocharts.view.LineChartView
+                android:id="@+id/chart"
+                android:layout_width="match_parent"
+                android:layout_height="400dp" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:gravity="center"
+                android:orientation="horizontal"
+                android:background="@color/colorAccent">
+
+                <com.joanzapata.iconify.widget.IconTextView
+                    android:id="@+id/missionTimeIcon"
+                    android:layout_width="50dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="0"
+                    android:gravity="center"
+                    android:text="{fa-clock-o}"
+                    android:textAlignment="center"
+                    android:textColor="@android:color/background_light"
+                    android:textSize="24sp" />
+
+                <TextClock
+                    android:id="@+id/missionTimeText"
+                    android:layout_width="120dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="0"
+                    android:fontFamily="@font/lato"
+                    android:gravity="center"
+                    android:text="00m 00s "
+                    android:textAlignment="center"
+                    android:textColor="@android:color/background_light"
+                    android:textSize="30sp" />
+
+                <com.joanzapata.iconify.widget.IconTextView
+                    android:id="@+id/roverMsgText"
+                    android:layout_width="50dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="0"
+                    android:gravity="center"
+                    android:text="{fa-info}"
+                    android:textAlignment="center"
+                    android:textColor="@android:color/background_light"
+                    android:textSize="24sp" />
+
+                <TextView
+                    android:id="@+id/errorText"
+                    android:layout_width="10dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"
+                    android:fontFamily="@font/lato"
+                    android:gravity="center"
+                    android:text="No messages at this time."
+                    android:textAlignment="textStart"
+                    android:textColor="@android:color/background_light"
+                    android:textSize="18sp" />
+
+            </LinearLayout>
+        </LinearLayout>
 
         <LinearLayout
             android:id="@+id/controls_layout"

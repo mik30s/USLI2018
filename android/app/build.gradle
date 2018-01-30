@@ -36,4 +36,6 @@ dependencies {
     compile 'com.github.ytai.ioio:IOIOLibAndroidBluetooth:5.05'
     compile 'com.github.ytai.ioio:IOIOLibAndroidAccessory:5.05'
     compile 'com.github.ytai.ioio:IOIOLibAndroidDevice:5.05'
+    // icons
+    compile 'com.joanzapata.iconify:android-iconify-fontawesome:2.2.2' // (v4.5)
 }

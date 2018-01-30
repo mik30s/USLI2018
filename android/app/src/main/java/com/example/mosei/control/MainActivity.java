@@ -1,5 +1,7 @@
 package com.example.mosei.control;
 
+import android.os.Handler;
+import android.os.Message;
 import android.util.Log;
 import ioio.lib.api.Uart;
 import android.os.Bundle;
@@ -15,6 +17,9 @@ import android.widget.Switch;
 import ioio.lib.util.BaseIOIOLooper;
 import android.widget.CompoundButton;
 import android.widget.TextView;
+
+import com.joanzapata.iconify.Iconify;
+import com.joanzapata.iconify.fonts.FontAwesomeModule;
 
 import ioio.lib.util.android.IOIOActivity;
 import ioio.lib.api.exception.ConnectionLostException;
@@ -33,17 +38,20 @@ public class MainActivity extends IOIOActivity
     private Switch lockSwitch;
     private Switch driveSwitch;
     private Switch solarSwitch;
-    private TextView driveSpeedText;
     private SeekBar driveSpeedSeek;
+    private TextView driveSpeedText;
+    private TextView errorText;
 
     private ListView packetListView;
     private ArrayAdapter<String> packetListAdapter;
     private String[] packetDataStrings = new String[8];
+    private static Handler handler;
 
     @Override
-
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        Iconify.with(new FontAwesomeModule());
+
         setContentView(R.layout.activity_main);
 
         lockSwitch = findViewById(R.id.lockSwitch);
@@ -56,6 +64,7 @@ public class MainActivity extends IOIOActivity
         driveSpeedSeek.setEnabled(false);
 
         driveSpeedSeek.setProgress(1);
+        errorText = findViewById(R.id.errorText);
         driveSpeedText = findViewById(R.id.speedText);
         packetListView = findViewById(R.id.packet_values_list);
 
@@ -71,6 +80,16 @@ public class MainActivity extends IOIOActivity
         packetListAdapter = new ArrayAdapter<String>(this,
                 android.R.layout.simple_list_item_1, packetDataStrings);
         packetListView.setAdapter(packetListAdapter);
+
+         handler = new Handler(){
+            @Override
+            public void handleMessage(Message msg) {
+                if(msg.what==0){
+                    errorText.setText((String)msg.obj);
+                }
+                super.handleMessage(msg);
+            }
+        };
     }
 
     class Looper extends BaseIOIOLooper
@@ -160,15 +179,29 @@ public class MainActivity extends IOIOActivity
                 @Override
                 public void onStopTrackingTouch(SeekBar seekBar) {}
             });
-
-
         }
 
         @Override
         public void loop() throws ConnectionLostException {
+            sendControlValues("{" + "\"cmd\":\"" + ROVER_COMM_VALUES + "\"" + "}");
+            Message msg = handler.obtainMessage();
+            msg.what = 0;
+            msg.arg1 = 0;
+            msg.obj = new String("Asking rover for data...");
+            handler.sendMessage(msg);
+
+            try {
+                //Thread.sleep(3000);
+                int length = istream.read();
+                msg = handler.obtainMessage();
+                msg.obj = new String("Got rover data");
+                handler.sendMessage(msg);
+
+            } catch(Exception ex) {
+                Log.e(TAG, "Could not read sensor values from rover");
+            }
         }
     }
-
 
     @Override
     protected Looper createIOIOLooper() {
