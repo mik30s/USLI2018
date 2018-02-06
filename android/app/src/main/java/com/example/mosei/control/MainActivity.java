@@ -6,7 +6,12 @@ import android.util.Log;
 import ioio.lib.api.Uart;
 import android.os.Bundle;
 import org.json.JSONObject;
+
+import java.io.BufferedInputStream;
+import java.io.BufferedReader;
+import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.OutputStream;
 
 import android.widget.ArrayAdapter;
@@ -41,11 +46,14 @@ public class MainActivity extends IOIOActivity
     private SeekBar driveSpeedSeek;
     private TextView driveSpeedText;
     private TextView errorText;
+    private TextView packetCountText;
 
     private ListView packetListView;
     private ArrayAdapter<String> packetListAdapter;
     private String[] packetDataStrings = new String[8];
     private static Handler handler;
+
+    private int packetCount = 0;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -63,10 +71,11 @@ public class MainActivity extends IOIOActivity
         driveSpeedSeek = findViewById(R.id.speedSeek);
         driveSpeedSeek.setEnabled(false);
 
-        driveSpeedSeek.setProgress(1);
+        driveSpeedSeek.setProgress(0);
         errorText = findViewById(R.id.errorText);
         driveSpeedText = findViewById(R.id.speedText);
         packetListView = findViewById(R.id.packet_values_list);
+        packetCountText = findViewById(R.id.packetCntText);
 
         packetDataStrings[0] = "Gyro. X - 0.000";
         packetDataStrings[1] = "Gyro. Y - 0.000";
@@ -85,7 +94,22 @@ public class MainActivity extends IOIOActivity
             @Override
             public void handleMessage(Message msg) {
                 if(msg.what==0){
-                    errorText.setText((String)msg.obj);
+                    //errorText.setText("Got rover data!");
+                    try {
+                        JSONObject sensorDataJson = new JSONObject((String) msg.obj);
+                        packetDataStrings[0] = "Gyro. X - "+sensorDataJson.getString("gx");
+                        packetDataStrings[1] = "Gyro. X - "+sensorDataJson.getString("gy");
+                        packetDataStrings[2] = "Gyro. X - "+sensorDataJson.getString("gz");
+                        packetDataStrings[3] = "Accl. X - "+sensorDataJson.getString("ax");
+                        packetDataStrings[4] = "Accl. Y - "+sensorDataJson.getString("ay");
+                        packetDataStrings[5] = "Accl. Z - "+sensorDataJson.getString("az");
+                        packetDataStrings[6] = "Sol. V - "+sensorDataJson.getString("sv");
+                        packetDataStrings[7] = "Bat. V - "+sensorDataJson.getString("bv");
+                        packetCountText.setText(packetCount + " p");
+                    }
+                    catch(Exception ex) {
+                     //   Log.e("SENSOR_DATA", ex.getMessage());
+                    }
                 }
                 super.handleMessage(msg);
             }
@@ -147,16 +171,11 @@ public class MainActivity extends IOIOActivity
             driveSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
                 @Override
                 public void onCheckedChanged(CompoundButton compoundButton, boolean b) {
-                    if (b) {
-                        driveSpeedSeek.setEnabled(true);
-                    } else {
-                        driveSpeedSeek.setEnabled(false);
-                    }
+                    driveSpeedSeek.setEnabled(b);
                     sendControlValues(
-                            "{" +
-                                    "\"cmd\":\"" + ROVER_COMM_DRIVE+ "\"," +
-                                    "\"aux\":\"" + (b ? 1 : 0) + "\"," +
-                                    "\"speed\":\"" + driveSpeedSeek.getProgress()+"\"" +"}"
+                        "{\"cmd\":\"" + ROVER_COMM_DRIVE+ "\"," +
+                        "\"aux\":\"" + (b ? 1 : 0) + "\"," +
+                        "\"speed\":\"" + -1*driveSpeedSeek.getProgress()+"\"}"
                     );
                 }
             });
@@ -164,13 +183,19 @@ public class MainActivity extends IOIOActivity
             driveSpeedSeek.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
                 @Override
                 public void onProgressChanged(SeekBar seekBar, int i, boolean b) {
-                    driveSpeedText.setText("x"+ i);
-                    sendControlValues(
-                            "{" +
-                                    "\"cmd\":\"" + ROVER_COMM_DRIVE+ "\"," +
-                                    "\"aux\":\"" + (b ? 1 : 0) + "\"," +
-                                    "\"speed\":\"" + driveSpeedSeek.getProgress()+"\"" +"}"
-                    );
+                    try {
+                        driveSpeedText.setText("x" + i);
+                        Thread.sleep(200);
+                        sendControlValues(
+                                "{" +
+                                        "\"cmd\":\"" + ROVER_COMM_DRIVE + "\"," +
+                                        "\"aux\":\"" + (b ? 1 : 0) + "\"," +
+                                        "\"speed\":\"" + -1*driveSpeedSeek.getProgress() +
+                                        "\"" + "}"
+                        );
+                    } catch(Exception ex){
+                        Log.e("","Interrupted sleep!");
+                    }
                 }
 
                 @Override
@@ -183,22 +208,27 @@ public class MainActivity extends IOIOActivity
 
         @Override
         public void loop() throws ConnectionLostException {
-            sendControlValues("{" + "\"cmd\":\"" + ROVER_COMM_VALUES + "\"" + "}");
-            Message msg = handler.obtainMessage();
-            msg.what = 0;
-            msg.arg1 = 0;
-            msg.obj = new String("Asking rover for data...");
-            handler.sendMessage(msg);
-
-            try {
-                //Thread.sleep(3000);
-                int length = istream.read();
-                msg = handler.obtainMessage();
-                msg.obj = new String("Got rover data");
-                handler.sendMessage(msg);
-
-            } catch(Exception ex) {
-                Log.e(TAG, "Could not read sensor values from rover");
+            InputStreamReader ir = new InputStreamReader(istream);
+            StringBuilder sb = new StringBuilder();
+            sb.append("0");
+            try(BufferedReader reader = new BufferedReader(ir)) {
+                int r;
+                while ((r = reader.read()) != -1) {
+                    char c = (char) r;
+                    if (c == '}') {
+                        sb.append(c);
+                        break;
+                    }
+                    sb.append(c);
+                }
+                Log.d("STR_BUILDER",sb.toString() );
+                //Log.i("SENSOR_READ_ERROR", sb.toString());
+                Message msg = handler.obtainMessage();
+                msg.obj = sb.toString();
+                msg.arg1 = 0;
+                handler.dispatchMessage(msg);
+            } catch(IOException ex) {
+                Log.e("SENSOR_READ_ERROR", ex.getMessage());
             }
         }
     }

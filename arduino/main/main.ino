@@ -41,6 +41,7 @@ private:
     servoCtrl.EnableTorque(ServoID::LOCK_SERVO, 1);
     servoCtrl.EnableTorque(ServoID::DEPLOYMENT_SERVO, 1);
     servoCtrl.wheelMode(ServoID::WHEEL_SERVO_ONE);
+    servoCtrl.wheelMode(ServoID::WHEEL_SERVO_TWO);
     delay(500);
     servoCtrl.EnableTorque(ServoID::WHEEL_SERVO_ONE, 1);
     scope = new Gyroscope();
@@ -76,8 +77,10 @@ public:
 
     if (isDriving) { 
       this->servoCtrl.WriteSpe(this->ServoID::WHEEL_SERVO_ONE, v * driveSpeed);
+      this->servoCtrl.WriteSpe(this->ServoID::WHEEL_SERVO_TWO, v * driveSpeed);
     } else {
       this->servoCtrl.WriteSpe(this->ServoID::WHEEL_SERVO_ONE, 0);  
+       this->servoCtrl.WriteSpe(this->ServoID::WHEEL_SERVO_TWO, 0); 
     }
     delay(1000);
   }
@@ -112,23 +115,24 @@ public:
    * @brief Sends data to the base station via on board radio.
    */
   void report() {
+    DebugSerial.println("reporting data...");
     scope->read();
     int solVoltage = (float(analogRead(SolarVoltage)) / 1023) * 5;
     int batVoltage = (float(analogRead(BatteryVoltage)) / 1023) * 7.4;
     this->gravityVectorZ = scope->values.az;
     const String jsonStr = String("{")
-       + "ax:"+ extendHex(String(scope->values.ax, HEX)) + ","      
-       + "ay:"+ extendHex(String(scope->values.ay, HEX)) + ","
-       + "az:"+ extendHex(String(scope->values.az, HEX)) + ","
-       + "gx:"+ extendHex(String(scope->values.gx, HEX)) + ","
-       + "gy:"+ extendHex(String(scope->values.gy, HEX)) + ","
-       + "gz:"+ extendHex(String(scope->values.gz, HEX)) + ","
-       + "bv:"+ extendHex(String(batVoltage, HEX))       + ","
-       + "sv:"+ extendHex(String(solVoltage, HEX))       + "}";
+       + "ax:\""+ String(scope->values.ax) + "\","      
+       + "ay:\""+ String(scope->values.ay) + "\","
+       + "az:\""+ String(scope->values.az) + "\","
+       + "gx:\""+ String(scope->values.gx) + "\","
+       + "gy:\""+ String(scope->values.gy) + "\","
+       + "gz:\""+ String(scope->values.gz) + "\","
+       + "bv:\""+ String(batVoltage)       + "\","
+       + "sv:\""+ String(solVoltage)       + "\"}";
     char lenStrBuf[3];
     RadioSerial.println(jsonStr + itoa(jsonStr.length(), lenStrBuf, 16));
     
-    DEBUG(jsonStr);
+    DebugSerial.println(jsonStr);
   }
 
   void deploy(){
@@ -167,9 +171,8 @@ RoverState* state = nullptr;
  * DS = deploy solar panels, 3
  * see enum abover for definition.
  */
-void radioComm() 
+void radioControlComm() 
 {
-  DEBUG("Radio comm called.");
   DynamicJsonBuffer jsonBuffer;
   const String jsonStr(RadioSerial.readStringUntil('\n'));
   JsonObject& object = jsonBuffer.parseObject(jsonStr);
@@ -182,8 +185,6 @@ void radioComm()
     DebugSerial.println("cmd: " + cmd + " aux: " + aux);
     state->isLocked = bool(aux.toInt());
     state->unlock();
-  } else if (cmd.toInt() == CommandCode::DA) {
-    state->report();
   } else if (cmd.toInt() == CommandCode::DS) {
     String aux = object[String("aux")];
     DebugSerial.println("cmd: " + cmd + " aux: " + aux);
@@ -238,7 +239,9 @@ void setup() {
 void loop() 
 {
   // process base station commands every second
-  millisHandler(200, radioComm);
+  millisHandler(200, radioControlComm);
+  millisHandler(700, []{state->report();});
+  
   // drive rover.
   state->drive();
 }
