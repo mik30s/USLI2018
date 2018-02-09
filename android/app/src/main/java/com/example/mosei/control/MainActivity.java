@@ -63,7 +63,7 @@ public class MainActivity extends IOIOActivity
         setContentView(R.layout.activity_main);
 
         lockSwitch = findViewById(R.id.lockSwitch);
-        lockSwitch.setChecked(false);
+        lockSwitch.setChecked(true);
         solarSwitch = findViewById(R.id.solarSwitch);
         solarSwitch.setChecked(false);
         driveSwitch = findViewById(R.id.driveSwitch);
@@ -127,7 +127,7 @@ public class MainActivity extends IOIOActivity
 
         void sendControlValues(String jsonString) {
             try {
-                JSONObject cmdObject = new JSONObject(jsonString);
+                JSONObject cmdObject = new JSONObject(jsonString+"\n");
                 Log.i("Sending json Event", cmdObject.toString());
                 ostream.write(cmdObject.toString().getBytes());
             } catch(Exception ex){
@@ -175,7 +175,7 @@ public class MainActivity extends IOIOActivity
                     sendControlValues(
                         "{\"cmd\":\"" + ROVER_COMM_DRIVE+ "\"," +
                         "\"aux\":\"" + (b ? 1 : 0) + "\"," +
-                        "\"speed\":\"" + -1*driveSpeedSeek.getProgress()+"\"}"
+                        "\"speed\":\"" + driveSpeedSeek.getProgress()+"\"}"
                     );
                 }
             });
@@ -185,12 +185,12 @@ public class MainActivity extends IOIOActivity
                 public void onProgressChanged(SeekBar seekBar, int i, boolean b) {
                     try {
                         driveSpeedText.setText("x" + i);
-                        Thread.sleep(200);
+                        //Thread.sleep(200);
                         sendControlValues(
                                 "{" +
                                         "\"cmd\":\"" + ROVER_COMM_DRIVE + "\"," +
-                                        "\"aux\":\"" + (b ? 1 : 0) + "\"," +
-                                        "\"speed\":\"" + -1*driveSpeedSeek.getProgress() +
+                                        "\"aux\": \"" + (b ? 1 : 0) + "\"," +
+                                        "\"speed\":\"" + driveSpeedSeek.getProgress() +
                                         "\"" + "}"
                         );
                     } catch(Exception ex){

@@ -159,6 +159,27 @@
                     android:max="8"
                     android:progress="3" />
 
+                <RadioGroup
+                    android:id="@+id/speedRadioGroup"
+                    android:layout_width="match_parent"
+                    android:layout_height="50dp"
+                    android:orientation="horizontal">
+
+                    <RadioButton
+                        android:id="@+id/radioButton2"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="RadioButton" />
+
+                    <RadioButton
+                        android:id="@+id/radioButton"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="RadioButton" />
+                </RadioGroup>
+
                 <ListView
                     android:id="@+id/packet_values_list"
                     android:layout_width="match_parent"

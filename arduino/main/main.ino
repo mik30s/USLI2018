@@ -91,23 +91,11 @@ public:
    */
   void unlock() 
   {
-    static long v = 0; 
-    // move rover 
-    this->gravityVectorZ = scope->read().az;
-    if (this->gravityVectorZ < 0) {
-      v = 1023;
-    } else if(gravityVectorZ > 0)  {
-      v = -1023;
-    }
-    delay(500);
-    
     // move unlocking servo
     if(isLocked == false){
       servoCtrl.WritePos(ServoID::LOCK_SERVO,300,1000);
-      delay(1000);
     } else {
       servoCtrl.WritePos(ServoID::LOCK_SERVO,0,1000);
-      delay(1000);
     }
   }
 
@@ -185,7 +173,9 @@ void radioControlComm()
     DebugSerial.println("cmd: " + cmd + " aux: " + aux);
     state->isLocked = bool(aux.toInt());
     state->unlock();
-  } else if (cmd.toInt() == CommandCode::DS) {
+  } 
+  else if (cmd.toInt() == CommandCode::DS) 
+  {
     String aux = object[String("aux")];
     DebugSerial.println("cmd: " + cmd + " aux: " + aux);
     state->isDeployed= bool(aux.toInt());
@@ -197,6 +187,7 @@ void radioControlComm()
     String aux = object[String("aux")];
     DebugSerial.println("cmd: " + cmd + " aux: " + aux);
     state->isDriving = bool(aux.toInt());
+    DebugSerial.println("isDriving: "+String((int)state->isDriving));
     String dSpeed = object[String("speed")];
     state->driveSpeed = dSpeed.toInt();
  }
@@ -240,7 +231,7 @@ void loop()
 {
   // process base station commands every second
   millisHandler(200, radioControlComm);
-  millisHandler(700, []{state->report();});
+  //millisHandler(700, []{state->report();});
   
   // drive rover.
   state->drive();
