@@ -13,15 +13,22 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.util.ArrayList;
+import java.util.List;
 
+import android.view.View;
 import android.widget.ArrayAdapter;
+import android.widget.LinearLayout;
 import android.widget.ListView;
+import android.widget.RadioButton;
+import android.widget.RadioGroup;
 import android.widget.ScrollView;
 import android.widget.SeekBar;
 import android.widget.Switch;
 import ioio.lib.util.BaseIOIOLooper;
 import android.widget.CompoundButton;
 import android.widget.TextView;
+import android.widget.ToggleButton;
 
 import com.joanzapata.iconify.Iconify;
 import com.joanzapata.iconify.fonts.FontAwesomeModule;
@@ -38,6 +45,10 @@ public class MainActivity extends IOIOActivity
     private final int ROVER_COMM_VALUES = 2; // report data on values and sensors
     private final int ROVER_COMM_SOLAR  = 3; // deploy solar panels.
     private final int ROVER_COMM_DRIVE  = 4; // start rover drive.
+    private final boolean FOWARD = true;
+    private final boolean BACKWARD = false;
+
+    private CustomLooper looper;
 
     // UI references
     private Switch lockSwitch;
@@ -47,13 +58,21 @@ public class MainActivity extends IOIOActivity
     private TextView driveSpeedText;
     private TextView errorText;
     private TextView packetCountText;
-
+    private RadioGroup speedRadioGroup;
+    private ToggleButton modeToggleButton;
     private ListView packetListView;
+    private ToggleButton driveDirectionToggleButton;
+
+    // List adapter
     private ArrayAdapter<String> packetListAdapter;
     private String[] packetDataStrings = new String[8];
-    private static Handler handler;
+
+    // ui/ioio thread handler
+    private static IOIOUIHandler handler;
 
     private int packetCount = 0;
+    private int currentDriveSpeed = 0;
+    private boolean direction;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -62,181 +81,130 @@ public class MainActivity extends IOIOActivity
 
         setContentView(R.layout.activity_main);
 
+        errorText = findViewById(R.id.errorText);
         lockSwitch = findViewById(R.id.lockSwitch);
-        lockSwitch.setChecked(true);
         solarSwitch = findViewById(R.id.solarSwitch);
-        solarSwitch.setChecked(false);
         driveSwitch = findViewById(R.id.driveSwitch);
-        driveSwitch.setChecked(false);
         driveSpeedSeek = findViewById(R.id.speedSeek);
+        driveSpeedText = findViewById(R.id.speedText);
+        packetCountText = findViewById(R.id.packetCntText);
+        speedRadioGroup = findViewById(R.id.speedRadioGroup);
+        modeToggleButton = findViewById(R.id.modeToggleButton);
+        packetListView = findViewById(R.id.packet_values_list);
+        driveDirectionToggleButton = findViewById(R.id.driveDirectionToggleButton);
+
+        lockSwitch.setChecked(false);
+        solarSwitch.setChecked(false);
+        driveSwitch.setChecked(false);
         driveSpeedSeek.setEnabled(false);
+        driveDirectionToggleButton.setChecked(true);
 
         driveSpeedSeek.setProgress(0);
-        errorText = findViewById(R.id.errorText);
-        driveSpeedText = findViewById(R.id.speedText);
-        packetListView = findViewById(R.id.packet_values_list);
-        packetCountText = findViewById(R.id.packetCntText);
 
-        packetDataStrings[0] = "Gyro. X - 0.000";
-        packetDataStrings[1] = "Gyro. Y - 0.000";
-        packetDataStrings[2] = "Gyro. Z - 0.000";
-        packetDataStrings[3] = "Accl. X - 0.000";
-        packetDataStrings[4] = "Accl. Y - 0.000";
-        packetDataStrings[5] = "Accl. Z - 0.000";
-        packetDataStrings[6] = "Sol.  V - 0.000";
-        packetDataStrings[7] = "Bat.  V - 0.000";
-
-        packetListAdapter = new ArrayAdapter<String>(this,
-                android.R.layout.simple_list_item_1, packetDataStrings);
-        packetListView.setAdapter(packetListAdapter);
-
-         handler = new Handler(){
-            @Override
-            public void handleMessage(Message msg) {
-                if(msg.what==0){
-                    //errorText.setText("Got rover data!");
-                    try {
-                        JSONObject sensorDataJson = new JSONObject((String) msg.obj);
-                        packetDataStrings[0] = "Gyro. X - "+sensorDataJson.getString("gx");
-                        packetDataStrings[1] = "Gyro. X - "+sensorDataJson.getString("gy");
-                        packetDataStrings[2] = "Gyro. X - "+sensorDataJson.getString("gz");
-                        packetDataStrings[3] = "Accl. X - "+sensorDataJson.getString("ax");
-                        packetDataStrings[4] = "Accl. Y - "+sensorDataJson.getString("ay");
-                        packetDataStrings[5] = "Accl. Z - "+sensorDataJson.getString("az");
-                        packetDataStrings[6] = "Sol. V - "+sensorDataJson.getString("sv");
-                        packetDataStrings[7] = "Bat. V - "+sensorDataJson.getString("bv");
-                        packetCountText.setText(packetCount + " p");
-                    }
-                    catch(Exception ex) {
-                     //   Log.e("SENSOR_DATA", ex.getMessage());
-                    }
-                }
-                super.handleMessage(msg);
-            }
-        };
+        handler = new IOIOUIHandler();
+        initializeHandlers();
     }
 
-    class Looper extends BaseIOIOLooper
-    {
-        private Uart uart;
-        private InputStream istream;
-        private OutputStream ostream;
-        private final int IOIO_RX_PIN = 35;
-        private final int IOIO_TX_PIN = 34;
-        private final static int BAUD_RATE = 57600;
-
-        void sendControlValues(String jsonString) {
-            try {
-                JSONObject cmdObject = new JSONObject(jsonString+"\n");
-                Log.i("Sending json Event", cmdObject.toString());
-                ostream.write(cmdObject.toString().getBytes());
-            } catch(Exception ex){
-                Log.e(TAG, ex.getMessage());
+    public void initializeHandlers() {
+        lockSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton compoundButton, boolean b) {
+                looper.sendControlValues ("{" +
+                        "\"cmd\":\"" + ROVER_COMM_UNLOCK + "\"," +
+                        "\"aux\":\"" + (b ? 1 : 0) + "\"" + "}"
+                );
             }
-        }
+        });
 
-        @Override
-        protected void setup() throws ConnectionLostException {
-            // initialize IOIO board uart.
-            uart = ioio_.openUart(IOIO_RX_PIN,
-                                  IOIO_TX_PIN,
-                                  BAUD_RATE,
-                                  Uart.Parity.NONE,
-                                  Uart.StopBits.ONE);
+        solarSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton compoundButton, boolean b) {
+                looper.sendControlValues ("{" +
+                        "\"cmd\":\"" + ROVER_COMM_SOLAR + "\"," +
+                        "\"aux\":\"" + (b ? 1 : 0) + "\"" + "}"
+                );
+            }
+        });
 
-            // setup input and output streams for ioio communication
-            istream = uart.getInputStream();
-            ostream = uart.getOutputStream();
-
-            lockSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-                @Override
-                public void onCheckedChanged(CompoundButton compoundButton, boolean b) {
-                    sendControlValues("{" +
-                    "\"cmd\":\"" + ROVER_COMM_UNLOCK + "\"," +
-                    "\"aux\":\"" + (b ? 1 : 0) + "\"" + "}"
-                    );
-                }
-            });
-
-            solarSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-                @Override
-                public void onCheckedChanged(CompoundButton compoundButton, boolean b) {
-                    sendControlValues("{" +
-                            "\"cmd\":\"" + ROVER_COMM_SOLAR + "\"," +
-                            "\"aux\":\"" + (b ? 1 : 0) + "\"" + "}"
-                    );
-                }
-            });
-
-            driveSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-                @Override
-                public void onCheckedChanged(CompoundButton compoundButton, boolean b) {
-                    driveSpeedSeek.setEnabled(b);
-                    sendControlValues(
+        driveSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton compoundButton, boolean b) {
+                driveSpeedSeek.setEnabled(b);
+                looper.sendControlValues (
                         "{\"cmd\":\"" + ROVER_COMM_DRIVE+ "\"," +
-                        "\"aux\":\"" + (b ? 1 : 0) + "\"," +
-                        "\"speed\":\"" + driveSpeedSeek.getProgress()+"\"}"
-                    );
-                }
-            });
-
-            driveSpeedSeek.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-                @Override
-                public void onProgressChanged(SeekBar seekBar, int i, boolean b) {
-                    try {
-                        driveSpeedText.setText("x" + i);
-                        //Thread.sleep(200);
-                        sendControlValues(
-                                "{" +
-                                        "\"cmd\":\"" + ROVER_COMM_DRIVE + "\"," +
-                                        "\"aux\": \"" + (b ? 1 : 0) + "\"," +
-                                        "\"speed\":\"" + driveSpeedSeek.getProgress() +
-                                        "\"" + "}"
-                        );
-                    } catch(Exception ex){
-                        Log.e("","Interrupted sleep!");
-                    }
-                }
-
-                @Override
-                public void onStartTrackingTouch(SeekBar seekBar) {}
-
-                @Override
-                public void onStopTrackingTouch(SeekBar seekBar) {}
-            });
-        }
-
-        @Override
-        public void loop() throws ConnectionLostException {
-            InputStreamReader ir = new InputStreamReader(istream);
-            StringBuilder sb = new StringBuilder();
-            sb.append("0");
-            try(BufferedReader reader = new BufferedReader(ir)) {
-                int r;
-                while ((r = reader.read()) != -1) {
-                    char c = (char) r;
-                    if (c == '}') {
-                        sb.append(c);
-                        break;
-                    }
-                    sb.append(c);
-                }
-                Log.d("STR_BUILDER",sb.toString() );
-                //Log.i("SENSOR_READ_ERROR", sb.toString());
-                Message msg = handler.obtainMessage();
-                msg.obj = sb.toString();
-                msg.arg1 = 0;
-                handler.dispatchMessage(msg);
-            } catch(IOException ex) {
-                Log.e("SENSOR_READ_ERROR", ex.getMessage());
+                                "\"aux\":\"" + (b ? 1 : 0) + "\"," +
+                                "\"speed\":\"" + (direction ? currentDriveSpeed : -1*currentDriveSpeed)+"\"}"
+                );
             }
-        }
+        });
+
+        speedRadioGroup.setOnCheckedChangeListener(new RadioGroup.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(RadioGroup radioGroup, int i) {
+                currentDriveSpeed = Integer.parseInt(""+((RadioButton)findViewById(i)).getText().charAt(1));
+                driveSpeedText.setText("x" + currentDriveSpeed);
+                int b = driveSwitch.isChecked() ? 1 : 0;
+                //Thread.sleep(200);
+                looper.sendControlValues (
+                        "{\"cmd\":\"" + ROVER_COMM_DRIVE + "\"," +
+                                "\"aux\": \"" + b  + "\"," +
+                                "\"speed\":\"" + (direction ? currentDriveSpeed : -1*currentDriveSpeed) +"\"}"
+                );
+            }
+        });
+
+        driveDirectionToggleButton.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton compoundButton, boolean b) {
+                //compoundButton.setText(b ? "Foward":"Backward");
+                direction = b;
+                looper.sendControlValues (
+                        "{\"cmd\":\"" + ROVER_COMM_DRIVE + "\"," +
+                                "\"aux\": \"" + (driveSwitch.isChecked() ? 1 : 0)  + "\"," +
+                                "\"speed\":\"" + (direction ? currentDriveSpeed : -1*currentDriveSpeed)+"\"}"
+                );
+            }
+        });
+
+        modeToggleButton.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton compoundButton, boolean b) {
+                disableControls();
+                String jsonFmt = "{\"cmd\":\"%d\", \"aux\":\"%d\", \"speed\":\"%d\"}";
+                try{
+                    // unlock
+                    looper.sendControlValues(String.format(jsonFmt, ROVER_COMM_UNLOCK, 0, 1));
+                    Thread.sleep(1000);
+                    // drive out slowly
+                    looper.sendControlValues(String.format(jsonFmt, ROVER_COMM_DRIVE, 1, 2));
+                    Thread.sleep(5000);
+                    // move fast
+                    looper.sendControlValues(String.format(jsonFmt, ROVER_COMM_DRIVE, 1, 5));
+                    Thread.sleep(8000);
+                    // stop moving
+                    looper.sendControlValues(String.format(jsonFmt, ROVER_COMM_DRIVE, 0, 1));
+                    Thread.sleep(8000);
+                    // deploy solar panels
+                    looper.sendControlValues(String.format(jsonFmt, ROVER_COMM_SOLAR, 1, 1));
+                } catch(Exception ex) {};
+            }
+        });
+    }
+
+    public void disableControls() {
+        findViewById(R.id.driveSwitch).setEnabled(false);
+        findViewById(R.id.solarSwitch).setEnabled(false);
+        findViewById(R.id.lockSwitch).setEnabled(false);
+        findViewById(R.id.driveSwitch).setEnabled(false);
+        findViewById(R.id.driveSwitch).setEnabled(false);
+        findViewById(R.id.driveDirectionToggleButton).setEnabled(false);
     }
 
     @Override
-    protected Looper createIOIOLooper() {
+    protected CustomLooper createIOIOLooper() {
         Log.i("Control app", "called ioio thread!");
-        return new Looper();
+        looper = new CustomLooper();
+        return looper;
     }
 }
 

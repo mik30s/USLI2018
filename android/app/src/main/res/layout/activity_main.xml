@@ -15,7 +15,7 @@
         android:orientation="horizontal">
 
         <LinearLayout
-            android:layout_width="648dp"
+            android:layout_width="550dp"
             android:layout_height="match_parent"
             android:orientation="vertical">
 
@@ -27,9 +27,9 @@
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
+                android:background="@color/colorAccent"
                 android:gravity="center"
-                android:orientation="horizontal"
-                android:background="@color/colorAccent">
+                android:orientation="horizontal">
 
                 <com.joanzapata.iconify.widget.IconTextView
                     android:id="@+id/missionTimeIcon"
@@ -148,7 +148,8 @@
                         android:lineSpacingExtra="18sp"
                         android:text="x0"
                         android:textAlignment="center"
-                        android:textSize="30sp" />
+                        android:textSize="30sp"
+                        android:visibility="gone" />
                 </LinearLayout>
 
                 <SeekBar
@@ -157,7 +158,32 @@
                     android:layout_width="match_parent"
                     android:layout_height="50dp"
                     android:max="8"
-                    android:progress="3" />
+                    android:progress="3"
+                    android:visibility="gone" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+
+                    <ToggleButton
+                        android:id="@+id/modeToggleButton"
+                        android:layout_width="400dp "
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="ToggleButton"
+                        android:textOff="Manual"
+                        android:textOn="Auto" />
+
+                    <ToggleButton
+                        android:id="@+id/driveDirectionToggleButton"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="ToggleButton"
+                        android:textOff="Backward"
+                        android:textOn="Foward" />
+                </LinearLayout>
 
                 <RadioGroup
                     android:id="@+id/speedRadioGroup"
@@ -166,18 +192,46 @@
                     android:orientation="horizontal">
 
                     <RadioButton
-                        android:id="@+id/radioButton2"
+                        android:id="@+id/speed1"
                         android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
+                        android:layout_height="match_parent"
                         android:layout_weight="1"
-                        android:text="RadioButton" />
+                        android:text="x1"
+                        android:textSize="30sp" />
 
                     <RadioButton
-                        android:id="@+id/radioButton"
+                        android:id="@+id/speed2"
                         android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
+                        android:layout_height="match_parent"
                         android:layout_weight="1"
-                        android:text="RadioButton" />
+                        android:text="x2"
+                        android:textAlignment="textStart"
+                        android:textSize="30sp" />
+
+                    <RadioButton
+                        android:id="@+id/speed3"
+                        android:layout_width="wrap_content"
+                        android:layout_height="match_parent"
+                        android:layout_weight="1"
+                        android:text="x3"
+                        android:textSize="30sp" />
+
+                    <RadioButton
+                        android:id="@+id/speed4"
+                        android:layout_width="wrap_content"
+                        android:layout_height="match_parent"
+                        android:layout_weight="1"
+                        android:text="x4"
+                        android:textSize="30sp" />
+
+                    <RadioButton
+                        android:id="@+id/speed5"
+                        android:layout_width="wrap_content"
+                        android:layout_height="match_parent"
+                        android:layout_weight="1"
+                        android:text="x5"
+                        android:textSize="30sp" />
+
                 </RadioGroup>
 
                 <ListView

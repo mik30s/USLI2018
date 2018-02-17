@@ -77,12 +77,12 @@ public:
 
     if (isDriving) { 
       this->servoCtrl.WriteSpe(this->ServoID::WHEEL_SERVO_ONE, v * driveSpeed);
-      this->servoCtrl.WriteSpe(this->ServoID::WHEEL_SERVO_TWO, v * driveSpeed);
+      this->servoCtrl.WriteSpe(this->ServoID::WHEEL_SERVO_TWO, -1*(v *driveSpeed));
     } else {
       this->servoCtrl.WriteSpe(this->ServoID::WHEEL_SERVO_ONE, 0);  
        this->servoCtrl.WriteSpe(this->ServoID::WHEEL_SERVO_TWO, 0); 
     }
-    delay(1000);
+    //delay(1000);
   }
 
   /**
@@ -92,10 +92,10 @@ public:
   void unlock() 
   {
     // move unlocking servo
-    if(isLocked == false){
-      servoCtrl.WritePos(ServoID::LOCK_SERVO,300,1000);
+    if (isLocked) {
+      servoCtrl.WritePos(ServoID::LOCK_SERVO,300,500);
     } else {
-      servoCtrl.WritePos(ServoID::LOCK_SERVO,0,1000);
+      servoCtrl.WritePos(ServoID::LOCK_SERVO,0,500);
     }
   }
 
@@ -190,6 +190,7 @@ void radioControlComm()
     DebugSerial.println("isDriving: "+String((int)state->isDriving));
     String dSpeed = object[String("speed")];
     state->driveSpeed = dSpeed.toInt();
+    DebugSerial.println("driving: "+String(state->driveSpeed));
  }
 }
 
@@ -224,7 +225,7 @@ void setup() {
   state->servoCtrl.WritePos(state->ServoID::DEPLOYMENT_SERVO, 500,1000);  
 //  delay(2000);
 //  state->servoCtrl.WritePos(state->ServoID::DEPLOYMENT_SERVO, 0,1000);  
-  state->servoCtrl.WritePos(state->ServoID::LOCK_SERVO,0,1000);
+ // state->servoCtrl.WritePos(state->ServoID::LOCK_SERVO,0,1000);
 }
 
 void loop() 
