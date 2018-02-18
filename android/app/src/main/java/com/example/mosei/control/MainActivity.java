@@ -145,7 +145,7 @@ public class MainActivity extends IOIOActivity
                 driveSpeedText.setText("x" + currentDriveSpeed);
                 int b = driveSwitch.isChecked() ? 1 : 0;
                 //Thread.sleep(200);
-                looper.sendControlValues 
+                looper.sendControlValues(
                         "{\"cmd\":\"" + ROVER_COMM_DRIVE + "\"," +
                                 "\"aux\": \"" + b  + "\"," +
                                 "\"speed\":\"" + (direction ? currentDriveSpeed : -1*currentDriveSpeed) +"\"}"
