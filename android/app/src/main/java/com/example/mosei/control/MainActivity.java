@@ -1,6 +1,9 @@
 package com.example.mosei.control;
 
+import android.graphics.Color;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Message;
 import android.util.Log;
 import android.widget.ArrayAdapter;
 import android.widget.CompoundButton;
@@ -17,9 +20,21 @@ import ioio.lib.api.Uart;
 import ioio.lib.api.exception.ConnectionLostException;
 import ioio.lib.util.BaseIOIOLooper;
 import ioio.lib.util.android.IOIOActivity;
+import lecho.lib.hellocharts.model.Line;
+import lecho.lib.hellocharts.model.LineChartData;
+import lecho.lib.hellocharts.model.PointValue;
+import lecho.lib.hellocharts.view.Chart;
+import lecho.lib.hellocharts.view.LineChartView;
+
 import com.joanzapata.iconify.fonts.FontAwesomeModule;
 
 import org.json.JSONObject;
+
+import java.io.BufferedInputStream;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 import static android.content.ContentValues.TAG;
 
@@ -42,14 +57,30 @@ public class MainActivity extends IOIOActivity
     private SeekBar driveSpeedSeek;
     private TextView driveSpeedText;
     private TextView errorText;
-    private TextView packetCountText;
+    private TextView orientationText;
     private RadioGroup speedRadioGroup;
     private ToggleButton modeToggleButton;
     private ListView packetListView;
     private ToggleButton driveDirectionToggleButton;
+    private JSONObject roverJson;
+    private ArrayList<String> packetData;
+    ArrayAdapter adapter;
+
+    LineChartView chart;
+
+    List<PointValue> valuesGX ;
+    List<PointValue> valuesGY ;
+    List<PointValue> valuesGZ ;
+    List<PointValue> valuesAX ;
+    List<PointValue> valuesAY ;
+    List<PointValue> valuesAZ ;
+
+    Line[] lines;
+    List<Line> lineList = new ArrayList<Line>();
 
     // ui/ioio thread handler
-    private static IOIOUIHandler handler;
+    private static Handler handler;
+    private int dataCount = 0;
 
     private int currentDriveSpeed = 0;
     private boolean direction;
@@ -61,13 +92,12 @@ public class MainActivity extends IOIOActivity
 
         setContentView(R.layout.activity_main);
 
-        errorText = findViewById(R.id.errorText);
         lockSwitch = findViewById(R.id.lockSwitch);
         solarSwitch = findViewById(R.id.solarSwitch);
         driveSwitch = findViewById(R.id.driveSwitch);
         driveSpeedSeek = findViewById(R.id.speedSeek);
         driveSpeedText = findViewById(R.id.speedText);
-        packetCountText = findViewById(R.id.packetCntText);
+        orientationText = findViewById(R.id.orientationDirText);
         speedRadioGroup = findViewById(R.id.speedRadioGroup);
         modeToggleButton = findViewById(R.id.modeToggleButton);
         packetListView = findViewById(R.id.packet_values_list);
@@ -82,7 +112,78 @@ public class MainActivity extends IOIOActivity
 
         driveSpeedSeek.setProgress(0);
 
-        handler = new IOIOUIHandler();
+        List<PointValue>[] values = new List[6];
+
+        lines = new Line[]{
+            new Line(valuesGX).setColor(Color.RED).setCubic(true),
+            new Line(valuesGY).setColor(Color.YELLOW).setCubic(true),
+            new Line(valuesGZ).setColor(Color.GREEN).setCubic(true),
+            new Line(valuesAX).setColor(Color.MAGENTA).setCubic(true),
+            new Line(valuesAY).setColor(Color.WHITE).setCubic(true),
+            new Line(valuesAZ).setColor(Color.BLUE).setCubic(true)
+        };
+
+
+        handler = new Handler() {
+            public void handleMessage(Message msg) {
+                final int what = msg.what;
+                switch(what) {
+                    case 1:
+                        updatePacketList();
+                        updateGraph();
+                        break;
+                    default: break;
+                }
+            }
+        };
+
+        chart = findViewById(R.id.chart);
+        packetData = new ArrayList<String>();
+        adapter = new ArrayAdapter(this, android.R.layout.simple_list_item_1, packetData);
+    }
+
+    public void updatePacketList() {
+        try {
+            adapter.clear();
+            adapter.add(String.valueOf("Accl. x: " + roverJson.getInt("ax")));
+            adapter.add(String.valueOf("Accl. y: " + roverJson.getInt("ay")));
+            adapter.add(String.valueOf("Accl. z: " + roverJson.getInt("az")));
+            adapter.add(String.valueOf("Grav. x: " + roverJson.getInt("gx")));
+            adapter.add(String.valueOf("Grav. y: " + roverJson.getInt("gy")));
+            adapter.add(String.valueOf("Grav. z: " + roverJson.getInt("gz")));
+
+            packetListView.setAdapter(adapter);
+
+            if (roverJson.getInt("az") > 0) {
+                orientationText.setText("{fa-arrow-up}");
+            } else {
+                orientationText.setText("{fa-arrow-down}");
+            }
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+    }
+
+    public void updateGraph() {
+        try {
+            valuesGX.add(new PointValue(dataCount, roverJson.getInt("gx")));
+            valuesGY.add(new PointValue(dataCount, roverJson.getInt("gy")));
+            valuesGZ.add(new PointValue(dataCount, roverJson.getInt("gz")));
+            valuesAX.add(new PointValue(dataCount, roverJson.getInt("ax")));
+            valuesAY.add(new PointValue(dataCount, roverJson.getInt("ay")));
+            valuesAZ.add(new PointValue(dataCount, roverJson.getInt("az")));
+
+            for (Line line : lines) {
+                lineList.add(line);
+            }
+
+            LineChartData data = new LineChartData();
+            data.setLines(lineList);
+
+            chart.setLineChartData(data);
+            dataCount++;
+
+        } catch(Exception ex){}
     }
 
     class CustomLooper extends BaseIOIOLooper
@@ -206,19 +307,25 @@ public class MainActivity extends IOIOActivity
 
         @Override
         public void loop() throws ConnectionLostException {
+            try {
+                BufferedInputStream bfi = new BufferedInputStream(uart.getInputStream());
+                String s = "";
+                char c = (char) bfi.read();
+                while (c != '\n') {
+                    s += c;
+                    c = (char) bfi.read();
+                }
+                roverJson = new JSONObject(s);
+                Log.i(TAG, "From rover: " + s);
 
+                handler.sendEmptyMessage(1);
+
+            } catch (Exception ex) {
+            }
         }
     }
 
-
-
-    public void disableControls() {
-//        driveSwitch.setEnabled(false);
-//        solarSwitch.setEnabled(false);
-//        lockSwitch.setEnabled(false);
-//        driveDirectionToggleButton.setEnabled(false);
-//        findViewById(R.id.speedRadioGroup).setEnabled(false);
-    }
+    public void disableControls() {}
 
     @Override
     protected CustomLooper createIOIOLooper() {

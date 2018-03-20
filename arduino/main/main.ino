@@ -69,9 +69,11 @@ public:
      static long v = 0;
     // move rover 
     this->gravityVectorZ = scope->read().az;
+    // TODO: NEXT TIME REPLACE THIS WITH A SIMPLE ASSIGNMENT
+    // TO v {v = 127}
     if (this->gravityVectorZ < 0) {
       v = 127;
-    } else if(gravityVectorZ > 0)  {
+    } else {
       v = -127;
     }
 
@@ -118,7 +120,7 @@ public:
        + "bv:\""+ String(batVoltage)       + "\","
        + "sv:\""+ String(solVoltage)       + "\"}";
     char lenStrBuf[3];
-    RadioSerial.println(jsonStr + itoa(jsonStr.length(), lenStrBuf, 16));
+    RadioSerial.println(jsonStr);
     
     DebugSerial.println(jsonStr);
   }
@@ -132,6 +134,11 @@ public:
       servoCtrl.WritePos(ServoID::DEPLOYMENT_SERVO,0,3000);
       delay(1000);
     }
+  }
+
+  void reportOrientation() {
+    DebugSerial.println("reporting data...");
+    RadioSerial.println(String(this->gravityVectorZ) + "\n");
   }
 };
 
@@ -236,6 +243,7 @@ void loop()
   
   // drive rover.
   state->drive();
+  state->report();
 }
 
 
