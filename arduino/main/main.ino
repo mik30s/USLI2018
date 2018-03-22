@@ -239,11 +239,11 @@ void loop()
 {
   // process base station commands every second
   millisHandler(200, radioControlComm);
-  //millisHandler(700, []{state->report();});
+  millisHandler(700, []{state->report();});
   
   // drive rover.
   state->drive();
-  state->report();
+  //state->report();
 }
 
 
