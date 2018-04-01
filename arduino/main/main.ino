@@ -1,74 +1,57 @@
 #include "Arduino.h"
 #include "gyro.h"
-#include "SoftwareSerial.h"
 #include "ArduinoJson.h"
 #include "SCServo.h"
 #include "deps.h"
 
 using HandlerCallbackType = void(*)();
+
 #define RadioSerial Serial1
 #define ServoSerial Serial3 
 #define DebugSerial Serial
 #define SolarVoltage A15
 #define BatteryVoltage A14
 
-
-#ifdef DEBUG
-  #define DEBUG(text) DebugSerial.println(text); 
-#else
-  #define DEBUG(text)
-#endif
-
-/**
- * Represents the state the rover is in
- * See data flow diagram in PDR final
- */
 struct RoverState 
 {
-public:  
-  bool isLocked;
-  bool isDriving;
-  SCServo servoCtrl;
-  Gyroscope* scope;
-  long gravityVectorZ;
-  uint16_t servoOneTiming;
-  uint16_t servoTwoTiming;
-
+public:
   enum ServoID : char 
   {
     WHEEL_SERVO_ONE  = 1,
     WHEEL_SERVO_TWO  = 2, 
-    DEPLOYMENT_SERVO = 3,
-    LOCK_SERVO       = 4
+    LOCK_SERVO       = 4,
+    DEPLOYMENT_SERVO = 3
   };
+
+  SCServo servoCtrl;
+  Gyroscope* scope;
+  long gravityVectorZ;
+  bool isLocked, isDriving, isDeployed, allowOrientation;
+  long driveSpeed;
 
 private:
   /**
    * Creates a rover state
    */
-  RoverState():
-    isLocked(true), isDriving(false)
+  RoverState()
+  :isDriving(false), isLocked(false), driveSpeed(1)
   {
-    //DEBUG("Enter state constructor");
     servoCtrl.pSerial = &ServoSerial;
     servoCtrl.EnableTorque(ServoID::WHEEL_SERVO_TWO, 1);
     servoCtrl.EnableTorque(ServoID::LOCK_SERVO, 1);
     servoCtrl.EnableTorque(ServoID::DEPLOYMENT_SERVO, 1);
     servoCtrl.wheelMode(ServoID::WHEEL_SERVO_ONE);
+    servoCtrl.wheelMode(ServoID::WHEEL_SERVO_TWO);
     delay(500);
     servoCtrl.EnableTorque(ServoID::WHEEL_SERVO_ONE, 1);
-    //servoCtrl.wheelMode(ServoID::WHEEL_SERVO_TWO);
-    //servoCtrl.WriteSpe(ServoID::WHEEL_SERVO_ONE, 2000);
     scope = new Gyroscope();
-    scope->read();
-    this->gravityVectorZ = scope->values.az;
-    //DEBUG("Exit state constructor");
+    gravityVectorZ = scope->read().az;
   }
-public:
+    
+public:  
   /**
    * Creates a new rover state to be used.
-.
-* Adheres to the singleton pattern.
+   * Adheres to the singleton pattern.
    * We should have only one rover state.`
    */
   static RoverState* getInstance() {
@@ -80,84 +63,88 @@ public:
   }
   
   /**
-   * @brief Moves the rover in one direction
+   * @brief Drives the rover.
    */
-  void drive() 
-  {
-    if (isDriving == true) {   
-      //DEBUG("Is driving")
-      servoCtrl.WriteSpe(1, this->servoOneTiming);
+  void drive() {
+    static long v = 127;
+   
+    this->gravityVectorZ = scope->read().az;
+   
+    if (allowOrientation) {
+      // move rover 
+      if (this->gravityVectorZ < 0) {
+        v = -127;
+      } else {
+        v = 127;
+      }
     } else {
-      //DEBUG("Is not driving")
-      servoCtrl.WriteSpe(1, 0);  
+        v = -127;
     }
+
+    if (isDriving) { 
+      this->servoCtrl.WriteSpe(this->ServoID::WHEEL_SERVO_ONE, v * driveSpeed);
+      this->servoCtrl.WriteSpe(this->ServoID::WHEEL_SERVO_TWO, -1*(v *driveSpeed));
+    } else {
+      this->servoCtrl.WriteSpe(this->ServoID::WHEEL_SERVO_ONE, 0);  
+       this->servoCtrl.WriteSpe(this->ServoID::WHEEL_SERVO_TWO, 0); 
+    }
+    //delay(1000);
   }
-  
+
   /**
    * @brief Unlocks the rover from
    * Docking bay.
    */
-  void unlock(bool lock) 
+  void unlock() 
   {
-    // orient rover using gyro readings.
-    scope->read();
-    this->gravityVectorZ = scope->values.az;
-    if (this->gravityVectorZ  < 0) {
-      this->servoOneTiming = 1023;
-      this->servoTwoTiming = 1023;
-    } else {
-      this->servoOneTiming = -1023;
-      this->servoTwoTiming = -1023;  
-    }
-    delay(500);
-    
     // move unlocking servo
-    if(lock == false){
-      servoCtrl.WritePos(ServoID::LOCK_SERVO,350,1000);
-      delay(1000);
+    if (isLocked) {
+      servoCtrl.WritePos(ServoID::LOCK_SERVO,300,500);
     } else {
-      servoCtrl.WritePos(ServoID::LOCK_SERVO,0,1000);
-      delay(1000);
+      servoCtrl.WritePos(ServoID::LOCK_SERVO,0,500);
     }
-    isLocked = lock;
   }
 
   /**
-   * @brief Deploys the solar panels
-   * of the rover
-   */
-  void deploy() {
-    
-  }
-
-  /**
-   * Sends data to the base station via on board radio.
+   * @brief Sends data to the base station via on board radio.
    */
   void report() {
+    DebugSerial.println("reporting data...");
     scope->read();
     int solVoltage = (float(analogRead(SolarVoltage)) / 1023) * 5;
     int batVoltage = (float(analogRead(BatteryVoltage)) / 1023) * 7.4;
     this->gravityVectorZ = scope->values.az;
     const String jsonStr = String("{")
-       + "ax:"+ extendHex(String(scope->values.ax, HEX)) + ","
-       + "ay:"+ extendHex(String(scope->values.ay, HEX)) + ","
-       + "az:"+ extendHex(String(scope->values.az, HEX)) + ","
-       + "gx:"+ extendHex(String(scope->values.gx, HEX)) + ","
-       + "gy:"+ extendHex(String(scope->values.gy, HEX)) + ","
-       + "gz:"+ extendHex(String(scope->values.gz, HEX)) + ","
-       + "bv:"+ extendHex(String(batVoltage, HEX))       + ","
-       + "sv:"+ extendHex(String(solVoltage, HEX))       + "}";
+       + "ax:\""+ String(scope->values.ax) + "\","      
+       + "ay:\""+ String(scope->values.ay) + "\","
+       + "az:\""+ String(scope->values.az) + "\","
+       + "gx:\""+ String(scope->values.gx) + "\","
+       + "gy:\""+ String(scope->values.gy) + "\","
+       + "gz:\""+ String(scope->values.gz) + "\","
+       + "bv:\""+ String(batVoltage)       + "\","
+       + "sv:\""+ String(solVoltage)       + "\"}";
     char lenStrBuf[3];
-    RadioSerial.println(jsonStr + itoa(jsonStr.length(), lenStrBuf, 16));
+    RadioSerial.println(jsonStr);
     
-    DEBUG(jsonStr);
+    DebugSerial.println(jsonStr);
+  }
+
+  void deploy(){
+     // move unlocking servo
+    if(isDeployed == false){
+      servoCtrl.WritePos(ServoID::DEPLOYMENT_SERVO,500,3000);
+      delay(1000);
+    } else {
+      servoCtrl.WritePos(ServoID::DEPLOYMENT_SERVO,0,3000);
+      delay(1000);
+    }
+  }
+
+  void reportOrientation() {
+    DebugSerial.println("reporting data...");
+    RadioSerial.println(String(this->gravityVectorZ) + "\n");
   }
 };
-
-/**
- * Manages the state of the rover.
- */
-RoverState* state = nullptr;
 
 /**
  * Command codes
@@ -167,6 +154,10 @@ RoverState* state = nullptr;
  * see radioComm function for full usage.
  */
 enum CommandCode : char { DE = 1, DA = 2, DS = 3, DR = 4};
+
+// An instance of the rover state object.
+RoverState* state = nullptr;
+bool sendData = true;
 
 /**
  * Communicates with base station and rover.
@@ -179,53 +170,46 @@ enum CommandCode : char { DE = 1, DA = 2, DS = 3, DR = 4};
  * DS = deploy solar panels, 3
  * see enum abover for definition.
  */
-void radioComm() 
+void radioControlComm() 
 {
-  DEBUG("Radio comm called.");
   DynamicJsonBuffer jsonBuffer;
-//  if (RadioSerial.available()) 
-//  {
-    const String jsonStr(RadioSerial.readStringUntil('\n'));
-    JsonObject& object = jsonBuffer.parseObject(jsonStr);
-    String cmd = object[String("cmd")];
-    
-    if (cmd.toInt() == CommandCode::DE) {
-      // unlock rover
-      String aux = object[String("aux")];
-      DEBUG("cmd: " + cmd)
-      DEBUG("aux: " + aux)
-      // if 1 then unlock the rover
-      // else lock it back in
-      if(aux.toInt() == 1){
-        state->unlock(true);
-      } else {
-        // lock the rover in
-        state->unlock(false);
-      }
-    } else if (cmd.toInt() == CommandCode::DA) {
-      // send data to base station
-      state->report();
-    } else if (cmd.toInt() == CommandCode::DS) {
-      // deploy solar panels
-      state->deploy();
-    } else if (cmd.toInt() == CommandCode::DR) {
-      // deploy rover
-      String aux = object[String("aux")];
-      DEBUG("cmd: " + cmd)
-      DEBUG("aux: " + aux)
-      // if 1 then drive the rover
-      // else stop
-      if(aux.toInt() == 1){
-        state->isDriving = true;
-      } else if(aux.toInt() == 0){
-        // lock the rover in
-        state->isDriving = false;
-      }
-    }
-//  } else {
-//    DEBUG("No radio comm.")
-//  }
+  const String jsonStr(RadioSerial.readStringUntil('\n'));
+  JsonObject& object = jsonBuffer.parseObject(jsonStr);
+  String cmd = object[String("cmd")];
+  String ao = object[String("az")];
+  String ad = object[String("ad")];
+  state->allowOrientation = bool(ao.toInt());
+  sendData = bool(ad.toInt());
+  
+  if (cmd.toInt() == CommandCode::DE) 
+  {
+    // unlock rover
+    String aux = object[String("aux")];
+    DebugSerial.println("cmd: " + cmd + " aux: " + aux);
+    state->isLocked = bool(aux.toInt());
+    state->unlock();
+  } 
+  else if (cmd.toInt() == CommandCode::DS) 
+  {
+    String aux = object[String("aux")];
+    DebugSerial.println("cmd: " + cmd + " aux: " + aux);
+    state->isDeployed= bool(aux.toInt());
+    state->deploy();
+  } 
+  else if (cmd.toInt() == CommandCode::DR) 
+  {
+    // deploy rover
+    String aux = object[String("aux")];
+    DebugSerial.println("cmd: " + cmd + " aux: " + aux);
+    state->isDriving = bool(aux.toInt());
+    DebugSerial.println("isDriving: "+String((int)state->isDriving));
+    String dSpeed = object[String("speed")];
+    state->driveSpeed = dSpeed.toInt();
+    DebugSerial.println("driving: "+String(state->driveSpeed));
+ }
 }
+
+
 
 /**
  * Calls a function after a certain time (in seconds)
@@ -242,47 +226,31 @@ void millisHandler(uint64_t duration, HandlerCallbackType callback)
   }
 }
 
-/**
- * Microcontroller setup called once by 
- * onboard firmware
- */
-void setup() 
-{ 
+
+void setup() {
   // Serial for debugging
   DebugSerial.begin(9600);
   // Serial connection to onboard radio
   RadioSerial.begin(57500);
   // Serial connection to Servo TTL board
   ServoSerial.begin(1000000);
-  
+ 
   state = RoverState::getInstance();
-  DEBUG("Rover state set!");
+  // lock the servo
+  //state->servoCtrl.WritePos(state->ServoID::DEPLOYMENT_SERVO, 500,1000);  
 }
 
-/**
- * Microcontroller remains in this loop until 
- * power is cut.
- */
 void loop() 
 {
-    // orient rover using gyro readings.
-    state->scope->read();
-    state->gravityVectorZ = state->scope->values.az;
-    if (state->gravityVectorZ  < 0) {
-      state->servoOneTiming = 1023;
-      state->servoTwoTiming = 1023;
-    } else {
-      state->servoOneTiming = -1023;
-      state->servoTwoTiming = -1023;  
-    }
-   // process base station commands every second
-   millisHandler(200, radioComm);
-   // move rover 
-   state->drive();
-   //state->report();
+  // process base station commands every second
+  millisHandler(200, radioControlComm);
+  millisHandler(700, []{
+      state->report();
+  });
+  
+  // drive rover.
+  state->drive();
 }
-
-
 
 
 
