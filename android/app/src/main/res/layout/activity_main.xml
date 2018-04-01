@@ -21,7 +21,7 @@
             <lecho.lib.hellocharts.view.LineChartView
                 android:id="@+id/chart"
                 android:layout_width="match_parent"
-                android:layout_height="400dp" />
+                android:layout_height="510dp" />
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -39,7 +39,7 @@
                     android:text="{fa-clock-o}"
                     android:textAlignment="center"
                     android:textColor="@android:color/background_light"
-                    android:textSize="24sp" />
+                    android:textSize="12sp" />
 
                 <TextClock
                     android:id="@+id/missionTimeText"
@@ -51,18 +51,7 @@
                     android:text="00m 00s "
                     android:textAlignment="center"
                     android:textColor="@android:color/background_light"
-                    android:textSize="30sp" />
-
-                <com.joanzapata.iconify.widget.IconTextView
-                    android:id="@+id/roverMsgText"
-                    android:layout_width="50dp"
-                    android:layout_height="match_parent"
-                    android:layout_weight="0"
-                    android:gravity="center"
-                    android:text="{fa-info}"
-                    android:textAlignment="center"
-                    android:textColor="@android:color/background_light"
-                    android:textSize="24sp" />
+                    android:textSize="14sp" />
 
                 <TextView
                     android:id="@+id/orientationText"
@@ -74,7 +63,7 @@
                     android:text="Orientation"
                     android:textAlignment="center"
                     android:textColor="@android:color/background_light"
-                    android:textSize="18sp" />
+                    android:textSize="14sp" />
 
                 <com.joanzapata.iconify.widget.IconTextView
                     android:id="@+id/orientationDirText"
@@ -85,7 +74,7 @@
                     android:text="{fa-arrow-up}"
                     android:textAlignment="textStart"
                     android:textColor="@android:color/background_light"
-                    android:textSize="24sp" />
+                    android:textSize="12sp" />
 
             </LinearLayout>
         </LinearLayout>
@@ -165,16 +154,6 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="horizontal">
-
-                    <ToggleButton
-                        android:id="@+id/modeToggleButton"
-                        android:layout_width="400dp "
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:text="ToggleButton"
-                        android:textOff="Manual"
-                        android:textOn="Auto" />
-
                     <ToggleButton
                         android:id="@+id/driveDirectionToggleButton"
                         android:layout_width="match_parent"
@@ -237,7 +216,30 @@
                 <ListView
                     android:id="@+id/packet_values_list"
                     android:layout_width="match_parent"
-                    android:layout_height="match_parent" />
+                    android:layout_height="370dp" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+
+                    <Button
+                        android:id="@+id/modeToggleButton"
+                        android:layout_width="400dp "
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Run Rover"
+                        android:textOff="Manual"
+                        android:textOn="Auto" />
+                    <Button
+                        android:id="@+id/stopButton"
+                        android:layout_width="400dp "
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Stop Rover"
+                        android:textOff="Manual"
+                        android:textOn="Auto" />
+                </LinearLayout>
             </LinearLayout>
 
         </LinearLayout>

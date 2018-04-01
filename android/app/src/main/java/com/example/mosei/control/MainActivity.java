@@ -1,11 +1,15 @@
 package com.example.mosei.control;
 
+import android.content.DialogInterface;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
+import android.support.v7.app.AlertDialog;
 import android.util.Log;
+import android.view.View;
 import android.widget.ArrayAdapter;
+import android.widget.Button;
 import android.widget.CompoundButton;
 import android.widget.ListView;
 import android.widget.RadioButton;
@@ -23,7 +27,6 @@ import ioio.lib.util.android.IOIOActivity;
 import lecho.lib.hellocharts.model.Line;
 import lecho.lib.hellocharts.model.LineChartData;
 import lecho.lib.hellocharts.model.PointValue;
-import lecho.lib.hellocharts.view.Chart;
 import lecho.lib.hellocharts.view.LineChartView;
 
 import com.joanzapata.iconify.fonts.FontAwesomeModule;
@@ -31,8 +34,6 @@ import com.joanzapata.iconify.fonts.FontAwesomeModule;
 import org.json.JSONObject;
 
 import java.io.BufferedInputStream;
-import java.io.BufferedReader;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -59,7 +60,8 @@ public class MainActivity extends IOIOActivity
     private TextView errorText;
     private TextView orientationText;
     private RadioGroup speedRadioGroup;
-    private ToggleButton modeToggleButton;
+    private Button runRoverBtn;
+    private Button stopRoverButton;
     private ListView packetListView;
     private ToggleButton driveDirectionToggleButton;
     private JSONObject roverJson;
@@ -68,22 +70,24 @@ public class MainActivity extends IOIOActivity
 
     LineChartView chart;
 
-    List<PointValue> valuesGX ;
-    List<PointValue> valuesGY ;
-    List<PointValue> valuesGZ ;
-    List<PointValue> valuesAX ;
-    List<PointValue> valuesAY ;
-    List<PointValue> valuesAZ ;
+    List<PointValue> valuesGX = new ArrayList<>() ;
+    List<PointValue> valuesGY = new ArrayList<>() ;
+    List<PointValue> valuesGZ = new ArrayList<>() ;
+    List<PointValue> valuesAX = new ArrayList<>() ;
+    List<PointValue> valuesAY = new ArrayList<>() ;
+    List<PointValue> valuesAZ = new ArrayList<>() ;
 
-    Line[] lines;
     List<Line> lineList = new ArrayList<Line>();
+    LineChartData lineChartData = new LineChartData();
 
     // ui/ioio thread handler
     private static Handler handler;
     private int dataCount = 0;
 
     private int currentDriveSpeed = 0;
+    private int currentZDirection = 0;
     private boolean direction;
+    private int rxData = 1;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -97,32 +101,29 @@ public class MainActivity extends IOIOActivity
         driveSwitch = findViewById(R.id.driveSwitch);
         driveSpeedSeek = findViewById(R.id.speedSeek);
         driveSpeedText = findViewById(R.id.speedText);
-        orientationText = findViewById(R.id.orientationDirText);
         speedRadioGroup = findViewById(R.id.speedRadioGroup);
-        modeToggleButton = findViewById(R.id.modeToggleButton);
+        runRoverBtn = findViewById(R.id.modeToggleButton);
         packetListView = findViewById(R.id.packet_values_list);
+        orientationText = findViewById(R.id.orientationDirText);
+        stopRoverButton = findViewById(R.id.stopButton);
         driveDirectionToggleButton = findViewById(R.id.driveDirectionToggleButton);
 
         lockSwitch.setChecked(false);
         solarSwitch.setChecked(false);
         driveSwitch.setChecked(false);
         driveSpeedSeek.setEnabled(false);
-        modeToggleButton.setChecked(false);
         driveDirectionToggleButton.setChecked(true);
 
         driveSpeedSeek.setProgress(0);
 
-        List<PointValue>[] values = new List[6];
+        lineList.add(new Line(valuesGX).setColor(Color.RED).setCubic(true).setHasPoints(false));
+        lineList.add(new Line(valuesGY).setColor(Color.YELLOW).setCubic(true).setHasPoints(false));
+        lineList.add(new Line(valuesGZ).setColor(Color.GREEN).setCubic(true).setHasPoints(false));
+        lineList.add(new Line(valuesAX).setColor(Color.MAGENTA).setCubic(true).setHasPoints(false));
+        lineList.add(new Line(valuesAY).setColor(Color.BLACK).setCubic(true).setHasPoints(false));
+        lineList.add(new Line(valuesAZ).setColor(Color.BLUE).setCubic(true).setHasPoints(false));
 
-        lines = new Line[]{
-            new Line(valuesGX).setColor(Color.RED).setCubic(true),
-            new Line(valuesGY).setColor(Color.YELLOW).setCubic(true),
-            new Line(valuesGZ).setColor(Color.GREEN).setCubic(true),
-            new Line(valuesAX).setColor(Color.MAGENTA).setCubic(true),
-            new Line(valuesAY).setColor(Color.WHITE).setCubic(true),
-            new Line(valuesAZ).setColor(Color.BLUE).setCubic(true)
-        };
-
+        lineChartData.setLines(lineList);
 
         handler = new Handler() {
             public void handleMessage(Message msg) {
@@ -138,25 +139,33 @@ public class MainActivity extends IOIOActivity
         };
 
         chart = findViewById(R.id.chart);
+
         packetData = new ArrayList<String>();
         adapter = new ArrayAdapter(this, android.R.layout.simple_list_item_1, packetData);
+    }
+
+    public float toDegS(int v) {
+        return v / 16384.0f;
     }
 
     public void updatePacketList() {
         try {
             adapter.clear();
-            adapter.add(String.valueOf("Accl. x: " + roverJson.getInt("ax")));
-            adapter.add(String.valueOf("Accl. y: " + roverJson.getInt("ay")));
-            adapter.add(String.valueOf("Accl. z: " + roverJson.getInt("az")));
-            adapter.add(String.valueOf("Grav. x: " + roverJson.getInt("gx")));
-            adapter.add(String.valueOf("Grav. y: " + roverJson.getInt("gy")));
-            adapter.add(String.valueOf("Grav. z: " + roverJson.getInt("gz")));
+            adapter.add(String.valueOf("Accl. x: " + toDegS(roverJson.getInt("ax"))));
+            adapter.add(String.valueOf("Accl. y: " + toDegS(roverJson.getInt("ay"))));
+            adapter.add(String.valueOf("Accl. z: " + toDegS(roverJson.getInt("az"))));
+            adapter.add(String.valueOf("Grav. x: " + toDegS(roverJson.getInt("gx"))));
+            adapter.add(String.valueOf("Grav. y: " + toDegS(roverJson.getInt("gy"))));
+            adapter.add(String.valueOf("Grav. z: " + toDegS(roverJson.getInt("gz"))));
+            adapter.add(String.valueOf("Battery: " + roverJson.getInt("bv") + " V"));
 
             packetListView.setAdapter(adapter);
 
             if (roverJson.getInt("az") > 0) {
+                currentZDirection = -1;
                 orientationText.setText("{fa-arrow-up}");
             } else {
+                currentZDirection = 1;
                 orientationText.setText("{fa-arrow-down}");
             }
         } catch (Exception ex) {
@@ -166,21 +175,14 @@ public class MainActivity extends IOIOActivity
 
     public void updateGraph() {
         try {
-            valuesGX.add(new PointValue(dataCount, roverJson.getInt("gx")));
-            valuesGY.add(new PointValue(dataCount, roverJson.getInt("gy")));
-            valuesGZ.add(new PointValue(dataCount, roverJson.getInt("gz")));
-            valuesAX.add(new PointValue(dataCount, roverJson.getInt("ax")));
-            valuesAY.add(new PointValue(dataCount, roverJson.getInt("ay")));
-            valuesAZ.add(new PointValue(dataCount, roverJson.getInt("az")));
+            valuesGX.add(new PointValue(dataCount, toDegS(roverJson.getInt("gx"))));
+            valuesGY.add(new PointValue(dataCount, toDegS(roverJson.getInt("gy"))));
+            valuesGZ.add(new PointValue(dataCount, toDegS(roverJson.getInt("gz"))));
+            valuesAX.add(new PointValue(dataCount, toDegS(roverJson.getInt("ax"))));
+            valuesAY.add(new PointValue(dataCount, toDegS(roverJson.getInt("ay"))));
+            valuesAZ.add(new PointValue(dataCount, toDegS(roverJson.getInt("az"))));
 
-            for (Line line : lines) {
-                lineList.add(line);
-            }
-
-            LineChartData data = new LineChartData();
-            data.setLines(lineList);
-
-            chart.setLineChartData(data);
+            chart.setLineChartData(lineChartData);
             dataCount++;
 
         } catch(Exception ex){}
@@ -194,7 +196,8 @@ public class MainActivity extends IOIOActivity
         private final static int BAUD_RATE = 57600;
 
         public void sendControlValues(Object ...params) {
-            String jsonFmt = "{\"cmd\":\"%d\", \"aux\":\"%d\", \"speed\":\"%d\"}";
+            String jsonFmt = "{\"cmd\":\"%d\", \"aux\":\"%d\", " +
+                             "\"speed\":\"%d\", \"az\":\"%d\", \"ad\":\"%d\"}";
 
             try {
                 String jsonString = String.format(jsonFmt, params);
@@ -210,14 +213,14 @@ public class MainActivity extends IOIOActivity
             lockSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
                 @Override
                 public void onCheckedChanged(CompoundButton compoundButton, boolean b) {
-                    sendControlValues(ROVER_COMM_UNLOCK, (b ? 1 : 0), 0);
+                    sendControlValues(ROVER_COMM_UNLOCK, (b ? 1 : 0), 0, 1, rxData);
                 }
             });
 
             solarSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
                 @Override
                 public void onCheckedChanged(CompoundButton compoundButton, boolean b) {
-                    sendControlValues (ROVER_COMM_SOLAR, (b ? 1 : 0), 0);
+                    sendControlValues (ROVER_COMM_SOLAR, (b ? 1 : 0), 0,1, rxData);
                 }
             });
 
@@ -226,7 +229,7 @@ public class MainActivity extends IOIOActivity
                 public void onCheckedChanged(CompoundButton compoundButton, boolean b) {
                     driveSpeedSeek.setEnabled(b);
                     int speed = direction ? currentDriveSpeed : -1*currentDriveSpeed;
-                    sendControlValues (ROVER_COMM_DRIVE, (b ? 1 : 0), speed);
+                    sendControlValues (ROVER_COMM_DRIVE, (b ? 1 : 0), speed,1, rxData);
                 }
             });
 
@@ -234,11 +237,11 @@ public class MainActivity extends IOIOActivity
                 @Override
                 public void onCheckedChanged(RadioGroup radioGroup, int i) {
                     currentDriveSpeed =
-                    Integer.parseInt(""+((RadioButton)findViewById(i)).getText().charAt(1));
+                        Integer.parseInt(""+((RadioButton)findViewById(i)).getText().charAt(1));
                     driveSpeedText.setText("x" + currentDriveSpeed);
                     int b = driveSwitch.isChecked() ? 1 : 0;
                     int speed = direction ? currentDriveSpeed : -1*currentDriveSpeed;
-                    sendControlValues(ROVER_COMM_DRIVE, b, speed);
+                    sendControlValues(ROVER_COMM_DRIVE, b, speed,1,rxData);
                 }
             });
 
@@ -250,48 +253,59 @@ public class MainActivity extends IOIOActivity
                     sendControlValues (
                         ROVER_COMM_DRIVE,
                         (driveSwitch.isChecked() ? 1 : 0),
-                        (direction ? currentDriveSpeed : -1*currentDriveSpeed)
-                    );
+                        (direction ? currentDriveSpeed : -1*currentDriveSpeed),1,rxData);
                 }
             });
 
-            modeToggleButton.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            stopRoverButton.setOnClickListener(new View.OnClickListener() {
                 @Override
-                public void onCheckedChanged(CompoundButton compoundButton, boolean b) {
-                    if (b) {
-                        Runnable r = new Runnable() {
-                            @Override
-                            public void run() {
-                                disableControls();
+                public void onClick(View view) {
+                    //compoundButton.setText(b ? "Foward":"Backward");
+                    sendControlValues (ROVER_COMM_DRIVE,0,1,1,rxData);
+                }
+            });
 
-                                String jsonFmt = "{\"cmd\":\"%d\", \"aux\":\"%d\", \"speed\":\"%d\"}";
-                                try {
-                                    // unlock
-                                    sendControlValues(ROVER_COMM_UNLOCK, 0, 1);
-                                    Thread.currentThread().sleep(1000);
-                                    // drive out slowly
-                                    sendControlValues(ROVER_COMM_DRIVE, 1, 2);
-                                    Thread.currentThread().sleep(5000);
-                                    // move fast
-                                    sendControlValues(ROVER_COMM_DRIVE, 1, 5);
-                                    Thread.currentThread().sleep(8000);
-                                    // stop moving
-                                    sendControlValues( ROVER_COMM_DRIVE, 0, 1);
-                                    Thread.currentThread().sleep(1000);
-                                    // deploy solar panels
-                                    sendControlValues(ROVER_COMM_SOLAR, 1, 1);
-                                } catch (Exception ex) {
-                                    Log.e(TAG, ex.getMessage());
+            runRoverBtn.setOnClickListener(new View.OnClickListener() {
+                AlertDialog.Builder builder = new AlertDialog.Builder(getApplicationContext());
+
+                @Override
+                public void onClick(View view) {
+                    // Create the AlertDialog object and return it
+                    Runnable r = new Runnable() {
+                        @Override
+                        public void run() {
+                            try {
+                                // unlock
+                                sendControlValues(ROVER_COMM_UNLOCK, 0, 1, 0, 0);
+                                Thread.currentThread().sleep(5000);
+                                // drive out slowly
+                                int az = roverJson.getInt("az");
+                                sendControlValues(ROVER_COMM_DRIVE, 1, -1, 0, 0);
+                                Thread.currentThread().sleep(20000);
+                                // move fast
+                                if (az > 0) {
+                                    sendControlValues(ROVER_COMM_DRIVE, 1, -5, 1, 1);
+                                } else {
+                                    sendControlValues(ROVER_COMM_DRIVE, 1, 5, 1, 0);
                                 }
+                                Thread.currentThread().sleep(8000);
+                                // stop moving
+                                sendControlValues( ROVER_COMM_DRIVE, 0, 1, 1, 0);
+                                Thread.currentThread().sleep(6000);
+                                // deploy solar panels
+                                sendControlValues(ROVER_COMM_SOLAR, 1, 1, 1, 0);
+                                // deploy solar panels
+                                sendControlValues(ROVER_COMM_SOLAR, 1, 1, 1, 1);
+                            } catch (Exception ex) {
+                                Log.e(TAG, ex.getMessage());
                             }
-                        };
-                        Thread t = new Thread(r);
-                        t.start();
-                    }
+                        }
+                    };
+                    Thread t = new Thread(r);
+                    t.start();
                 }
             });
         }
-
 
         @Override
         protected void setup() throws ConnectionLostException {
@@ -317,15 +331,10 @@ public class MainActivity extends IOIOActivity
                 }
                 roverJson = new JSONObject(s);
                 Log.i(TAG, "From rover: " + s);
-
                 handler.sendEmptyMessage(1);
-
-            } catch (Exception ex) {
-            }
+            } catch (Exception ex) {}
         }
     }
-
-    public void disableControls() {}
 
     @Override
     protected CustomLooper createIOIOLooper() {

@@ -26,7 +26,7 @@ public:
   SCServo servoCtrl;
   Gyroscope* scope;
   long gravityVectorZ;
-  bool isLocked, isDriving, isDeployed;
+  bool isLocked, isDriving, isDeployed, allowOrientation;
   long driveSpeed;
 
 private:
@@ -66,15 +66,19 @@ public:
    * @brief Drives the rover.
    */
   void drive() {
-     static long v = 0;
-    // move rover 
+    static long v = 127;
+   
     this->gravityVectorZ = scope->read().az;
-    // TODO: NEXT TIME REPLACE THIS WITH A SIMPLE ASSIGNMENT
-    // TO v {v = 127}
-    if (this->gravityVectorZ < 0) {
-      v = 127;
+   
+    if (allowOrientation) {
+      // move rover 
+      if (this->gravityVectorZ < 0) {
+        v = -127;
+      } else {
+        v = 127;
+      }
     } else {
-      v = -127;
+        v = -127;
     }
 
     if (isDriving) { 
@@ -153,7 +157,7 @@ enum CommandCode : char { DE = 1, DA = 2, DS = 3, DR = 4};
 
 // An instance of the rover state object.
 RoverState* state = nullptr;
-
+bool sendData = true;
 
 /**
  * Communicates with base station and rover.
@@ -172,6 +176,10 @@ void radioControlComm()
   const String jsonStr(RadioSerial.readStringUntil('\n'));
   JsonObject& object = jsonBuffer.parseObject(jsonStr);
   String cmd = object[String("cmd")];
+  String ao = object[String("az")];
+  String ad = object[String("ad")];
+  state->allowOrientation = bool(ao.toInt());
+  sendData = bool(ad.toInt());
   
   if (cmd.toInt() == CommandCode::DE) 
   {
@@ -229,21 +237,19 @@ void setup() {
  
   state = RoverState::getInstance();
   // lock the servo
-  state->servoCtrl.WritePos(state->ServoID::DEPLOYMENT_SERVO, 500,1000);  
-//  delay(2000);
-//  state->servoCtrl.WritePos(state->ServoID::DEPLOYMENT_SERVO, 0,1000);  
- // state->servoCtrl.WritePos(state->ServoID::LOCK_SERVO,0,1000);
+  //state->servoCtrl.WritePos(state->ServoID::DEPLOYMENT_SERVO, 500,1000);  
 }
 
 void loop() 
 {
   // process base station commands every second
   millisHandler(200, radioControlComm);
-  millisHandler(700, []{state->report();});
+  millisHandler(700, []{
+      state->report();
+  });
   
   // drive rover.
   state->drive();
-  //state->report();
 }
 
 
