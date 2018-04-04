@@ -160,8 +160,8 @@
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:text="ToggleButton"
-                        android:textOff="Backward"
-                        android:textOn="Foward" />
+                        android:textOff="Foward"
+                        android:textOn="Backward" />
                 </LinearLayout>
 
                 <RadioGroup

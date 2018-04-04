@@ -176,10 +176,12 @@ void radioControlComm()
   const String jsonStr(RadioSerial.readStringUntil('\n'));
   JsonObject& object = jsonBuffer.parseObject(jsonStr);
   String cmd = object[String("cmd")];
-  String ao = object[String("az")];
+  bool az = object[String("az")];
   String ad = object[String("ad")];
-  state->allowOrientation = bool(ao.toInt());
+  state->allowOrientation = az;
   sendData = bool(ad.toInt());
+
+  DebugSerial.println("allow orientation: " + String(az));
   
   if (cmd.toInt() == CommandCode::DE) 
   {

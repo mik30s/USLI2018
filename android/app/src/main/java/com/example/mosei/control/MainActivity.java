@@ -197,7 +197,7 @@ public class MainActivity extends IOIOActivity
 
         public void sendControlValues(Object ...params) {
             String jsonFmt = "{\"cmd\":\"%d\", \"aux\":\"%d\", " +
-                             "\"speed\":\"%d\", \"az\":\"%d\", \"ad\":\"%d\"}";
+                             "\"speed\":\"%d\", \"az\":\"%b\", \"ad\":\"%b\"}";
 
             try {
                 String jsonString = String.format(jsonFmt, params);
@@ -270,32 +270,35 @@ public class MainActivity extends IOIOActivity
 
                 @Override
                 public void onClick(View view) {
-                    // Create the AlertDialog object and return it
+//                    // Create the AlertDialog object and return it
+//                    String jsonFmt = "{\"cmd\":\"%d\", \"aux\":\"%d\", " +
+//                            "\"speed\":\"%d\", \"az\":\"%d\", \"ad\":\"%d\"}";
+
                     Runnable r = new Runnable() {
                         @Override
                         public void run() {
                             try {
                                 // unlock
-                                sendControlValues(ROVER_COMM_UNLOCK, 0, 1, 0, 0);
+                                sendControlValues(ROVER_COMM_UNLOCK, 0, 1, false, 0);
                                 Thread.currentThread().sleep(5000);
                                 // drive out slowly
                                 int az = roverJson.getInt("az");
-                                sendControlValues(ROVER_COMM_DRIVE, 1, -1, 0, 0);
-                                Thread.currentThread().sleep(20000);
+                                sendControlValues(ROVER_COMM_DRIVE, 1, -5, false, 0);
+                                Thread.currentThread().sleep(4000);
                                 // move fast
                                 if (az > 0) {
-                                    sendControlValues(ROVER_COMM_DRIVE, 1, -5, 1, 1);
+                                    sendControlValues(ROVER_COMM_DRIVE, 1, -5, true, 0);
                                 } else {
-                                    sendControlValues(ROVER_COMM_DRIVE, 1, 5, 1, 0);
+                                    sendControlValues(ROVER_COMM_DRIVE, 1, 5, true, 0);
                                 }
-                                Thread.currentThread().sleep(8000);
+                                Thread.currentThread().sleep(30000);
                                 // stop moving
-                                sendControlValues( ROVER_COMM_DRIVE, 0, 1, 1, 0);
+                                sendControlValues( ROVER_COMM_DRIVE, 0, 1, true, 0);
                                 Thread.currentThread().sleep(6000);
                                 // deploy solar panels
-                                sendControlValues(ROVER_COMM_SOLAR, 1, 1, 1, 0);
+                                sendControlValues(ROVER_COMM_SOLAR, 1, 1, true, 0);
                                 // deploy solar panels
-                                sendControlValues(ROVER_COMM_SOLAR, 1, 1, 1, 1);
+                                sendControlValues(ROVER_COMM_SOLAR, 1, 1, true  , 1);
                             } catch (Exception ex) {
                                 Log.e(TAG, ex.getMessage());
                             }
